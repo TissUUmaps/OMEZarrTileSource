@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OMEZarrTileSource</title>
+</head>
+
+<body>
+  <h1>OMEZarrTileSource</h1>
+  <div id="viewer" style="width: 1280px; height: 1024px;"></div>
+  <script type="module">
+    import OpenSeadragon from "openseadragon";
+
+    // import { OMEZarrTileSource } from "omezarr-tilesource";
+    import { OMEZarrTileSource } from "/src/OMEZarrTileSource.js";
+
+    OMEZarrTileSource.enable(OpenSeadragon);
+
+    new OpenSeadragon.Viewer(
+      {
+        id: "viewer",
+        tileSources: {
+          type: "ome-zarr",
+          url: "https://storage.googleapis.com/jax-public-ngff/public/39287.zarr/0",
+        },
+        prefixUrl: "https://openseadragon.github.io/openseadragon/images/",
+        timeout: 60000, // increase timeout for large images,
+        minZoomImageRatio: 0, // allow zooming out indefinitely
+        maxZoomPixelRatio: Infinity, // allow zooming in indefinitely
+      }
+    );
+  </script>
+</body>
+
+</html>
