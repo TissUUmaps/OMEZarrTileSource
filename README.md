@@ -5,7 +5,7 @@
 [![Pull requests](https://img.shields.io/github/issues-pr/TissUUmaps/OMEZarrTileSource?label=pr)](https://github.com/TissUUmaps/OMEZarrTileSource/pulls)
 [![Pages](https://img.shields.io/github/actions/workflow/status/TissUUmaps/OMEZarrTileSource/pages.yml?label=pages)](https://github.com/TissUUmaps/OMEZarrTileSource/actions/workflows/pages.yml)
 [![Publish](https://img.shields.io/github/actions/workflow/status/TissUUmaps/OMEZarrTileSource/publish.yml?label=publish)](https://github.com/TissUUmaps/OMEZarrTileSource/actions/workflows/publish.yml)
-[![NPM version](https://img.shields.io/npm/v/OMEZarrTileSource?label=npm)](https://www.npmjs.com/package/OMEZarrTileSource)
+[![NPM version](https://img.shields.io/npm/v/omezarr-tilesource?label=npm)](https://www.npmjs.com/package/omezarr-tilesource)
 [![License](https://img.shields.io/github/license/TissUUmaps/OMEZarrTileSource?label=license)](LICENSE)
 
 An OpenSeadragon tile source for the OME-Zarr bioimage file format
