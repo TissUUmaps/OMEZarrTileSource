@@ -1,12 +1,12 @@
 # OMEZarrTileSource
 
-[![Release](https://img.shields.io/github/v/release/jwindhager/OMEZarrTileSource?label=release)](https://github.com/jwindhager/OMEZarrTileSource/releases)
-[![Issues](https://img.shields.io/github/issues/jwindhager/OMEZarrTileSource?label=issues)](https://github.com/jwindhager/OMEZarrTileSource/issues)
-[![Pull requests](https://img.shields.io/github/issues-pr/jwindhager/OMEZarrTileSource?label=pr)](https://github.com/jwindhager/OMEZarrTileSource/pulls)
-[![Pages](https://img.shields.io/github/actions/workflow/status/jwindhager/OMEZarrTileSource/pages.yml?label=pages)](https://github.com/jwindhager/OMEZarrTileSource/actions/workflows/pages.yaml)
-[![Release](https://img.shields.io/github/actions/workflow/status/jwindhager/OMEZarrTileSource/release.yml?label=release)](https://github.com/jwindhager/OMEZarrTileSource/actions/workflows/release.yaml)
+[![Release](https://img.shields.io/github/v/release/TissUUmaps/OMEZarrTileSource?label=release)](https://github.com/TissUUmaps/OMEZarrTileSource/releases)
+[![Issues](https://img.shields.io/github/issues/TissUUmaps/OMEZarrTileSource?label=issues)](https://github.com/TissUUmaps/OMEZarrTileSource/issues)
+[![Pull requests](https://img.shields.io/github/issues-pr/TissUUmaps/OMEZarrTileSource?label=pr)](https://github.com/TissUUmaps/OMEZarrTileSource/pulls)
+[![Pages](https://img.shields.io/github/actions/workflow/status/TissUUmaps/OMEZarrTileSource/pages.yml?label=pages)](https://github.com/TissUUmaps/OMEZarrTileSource/actions/workflows/pages.yaml)
+[![Release](https://img.shields.io/github/actions/workflow/status/TissUUmaps/OMEZarrTileSource/release.yml?label=release)](https://github.com/TissUUmaps/OMEZarrTileSource/actions/workflows/release.yaml)
 [![NPM version](https://img.shields.io/npm/v/OMEZarrTileSource?label=npm)](https://www.npmjs.com/package/OMEZarrTileSource)
-[![License](https://img.shields.io/github/license/jwindhager/OMEZarrTileSource?label=license)](LICENSE)
+[![License](https://img.shields.io/github/license/TissUUmaps/OMEZarrTileSource?label=license)](LICENSE)
 
 An OpenSeadragon tile source for the OME-Zarr bioimage file format.
 
@@ -59,7 +59,7 @@ const viewer = OpenSeadragon(
 
 ## Example
 
-[Example](https://jwindhager.github.io/OMEZarrTileSource)
+[Example](https://tissuumaps.github.io/OMEZarrTileSource)
 
 [Source code](index.html)
 
