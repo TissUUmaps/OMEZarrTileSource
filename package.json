@@ -2,6 +2,10 @@
   "name": "omezarr-tilesource",
   "version": "0.0.1",
   "author": "Jonas Windhager <jonas@windhager.io> (https://www.windhager.io)",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TissUUmaps/OMEZarrTileSource.git"
+  },
   "type": "module",
   "files": [
     "dist"
