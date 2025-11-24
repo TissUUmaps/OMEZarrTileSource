@@ -42,7 +42,7 @@ const viewer = OpenSeadragon(
             // t: undefined,
             // c: undefined,
             // z: undefined
-        }
+        },
         // direct instantiation with a URL string (works with any OME-Zarr storage backend)
         new OMEZarrTileSource(url),
         // direct instantiation with an options object (no prior enabling required)
