@@ -1,6 +1,10 @@
 {
   "name": "omezarr-tilesource",
-  "version": "0.0.1",
+  "version": "0.0.2",
+  "description": "An OpenSeadragon tile source for the OME-Zarr bioimage file format",
+  "homepage": "https://github.com/TissUUmaps/OMEZarrTileSource#readme",
+  "bugs": "https://github.com/TissUUmaps/OMEZarrTileSource/issues",
+  "license": "MIT",
   "author": "Jonas Windhager <jonas@windhager.io> (https://www.windhager.io)",
   "repository": {
     "type": "git",

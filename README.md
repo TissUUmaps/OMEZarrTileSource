@@ -3,12 +3,12 @@
 [![Release](https://img.shields.io/github/v/release/TissUUmaps/OMEZarrTileSource?label=release)](https://github.com/TissUUmaps/OMEZarrTileSource/releases)
 [![Issues](https://img.shields.io/github/issues/TissUUmaps/OMEZarrTileSource?label=issues)](https://github.com/TissUUmaps/OMEZarrTileSource/issues)
 [![Pull requests](https://img.shields.io/github/issues-pr/TissUUmaps/OMEZarrTileSource?label=pr)](https://github.com/TissUUmaps/OMEZarrTileSource/pulls)
-[![Pages](https://img.shields.io/github/actions/workflow/status/TissUUmaps/OMEZarrTileSource/pages.yml?label=pages)](https://github.com/TissUUmaps/OMEZarrTileSource/actions/workflows/pages.yaml)
-[![Release](https://img.shields.io/github/actions/workflow/status/TissUUmaps/OMEZarrTileSource/release.yml?label=release)](https://github.com/TissUUmaps/OMEZarrTileSource/actions/workflows/release.yaml)
+[![Pages](https://img.shields.io/github/actions/workflow/status/TissUUmaps/OMEZarrTileSource/pages.yml?label=pages)](https://github.com/TissUUmaps/OMEZarrTileSource/actions/workflows/pages.yml)
+[![Publish](https://img.shields.io/github/actions/workflow/status/TissUUmaps/OMEZarrTileSource/publish.yml?label=publish)](https://github.com/TissUUmaps/OMEZarrTileSource/actions/workflows/publish.yml)
 [![NPM version](https://img.shields.io/npm/v/OMEZarrTileSource?label=npm)](https://www.npmjs.com/package/OMEZarrTileSource)
 [![License](https://img.shields.io/github/license/TissUUmaps/OMEZarrTileSource?label=license)](LICENSE)
 
-An OpenSeadragon tile source for the OME-Zarr bioimage file format.
+An OpenSeadragon tile source for the OME-Zarr bioimage file format
 
 ## Installation
 
