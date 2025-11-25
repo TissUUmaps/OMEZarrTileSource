@@ -10,6 +10,10 @@
 
 An OpenSeadragon tile source for the OME-Zarr bioimage file format
 
+## Prerequisites
+
+OpenSeadragon 5 or newer
+
 ## Installation
 
 Using npm:
