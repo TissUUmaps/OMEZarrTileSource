@@ -1,7 +1,7 @@
 import * as zarr from "zarrita";
 import { renderImage, type Multiscale, type Omero } from "ome-zarr.js";
 import { ZipFileStore } from "@zarrita/storage";
-import OpenSeadragon, { TileSource, Point, type ImageJob } from "openseadragon";
+import OpenSeadragon from "openseadragon";
 
 export interface OMEZarrTileSourceOptions {
   type?: "ome-zarr";
@@ -12,13 +12,13 @@ export interface OMEZarrTileSourceOptions {
   z?: number;
 }
 
-export class OMEZarrTileSource extends TileSource {
+export class OMEZarrTileSource extends OpenSeadragon.TileSource {
   static readonly DUMMY_XHR = new XMLHttpRequest();
 
-  // properties inherited from/required by TileSource
+  // properties inherited from/required by OpenSeadragon.TileSource
   readonly url: string;
   aspectRatio: number = 1;
-  dimensions: Point = new Point(10, 10);
+  dimensions: OpenSeadragon.Point = new OpenSeadragon.Point(10, 10);
   maxLevel: number = 0;
   ready: boolean = false;
 
@@ -89,7 +89,7 @@ export class OMEZarrTileSource extends TileSource {
     return { type: "ome-zarr", ...(data as OMEZarrTileSourceOptions) };
   }
 
-  equals(other: TileSource): boolean {
+  equals(other: OpenSeadragon.TileSource): boolean {
     return (
       other instanceof OMEZarrTileSource &&
       this.url === other.url &&
@@ -125,7 +125,7 @@ export class OMEZarrTileSource extends TileSource {
         this._axisIndices = axisIndices;
         this._arrays = arrays;
         this.aspectRatio = maxWidth / maxHeight;
-        this.dimensions = new Point(maxWidth, maxHeight);
+        this.dimensions = new OpenSeadragon.Point(maxWidth, maxHeight);
         this.maxLevel = arrays.length - 1;
         this.ready = true;
         console.debug(`ready for ${url}`);
@@ -137,7 +137,7 @@ export class OMEZarrTileSource extends TileSource {
         this._axisIndices = undefined;
         this._arrays = undefined;
         this.aspectRatio = 1;
-        this.dimensions = new Point(10, 10);
+        this.dimensions = new OpenSeadragon.Point(10, 10);
         this.maxLevel = 0;
         this.ready = false;
         const message = `failed to get image info for ${url}: ${reason}`;
@@ -206,11 +206,11 @@ export class OMEZarrTileSource extends TileSource {
     return url.toString();
   }
 
-  downloadTileStart(context: ImageJob): void {
+  downloadTileStart(context: OpenSeadragon.ImageJob): void {
     const abortController = new AbortController();
     context.userData.abortController = abortController;
     const urlSearchParams = new URLSearchParams(
-      // @ts-ignore ImageJob.src
+      // @ts-ignore OpenSeadragon.ImageJob.src
       context.src
     );
     const level = +urlSearchParams.get("level")!;
@@ -279,7 +279,7 @@ export class OMEZarrTileSource extends TileSource {
     }
   }
 
-  downloadTileAbort(context: ImageJob): void {
+  downloadTileAbort(context: OpenSeadragon.ImageJob): void {
     if (context.userData.abortController !== undefined) {
       (context.userData.abortController as AbortController).abort();
       context.userData.abortController = undefined;
