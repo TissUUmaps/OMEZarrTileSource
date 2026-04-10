@@ -14,10 +14,12 @@
   "files": [
     "dist"
   ],
+  "types": "./dist/omezarr-tilesource.d.ts",
   "main": "./dist/omezarr-tilesource.umd.cjs",
   "module": "./dist/omezarr-tilesource.js",
   "exports": {
     ".": {
+      "types": "./dist/omezarr-tilesource.d.ts",
       "import": "./dist/omezarr-tilesource.js",
       "require": "./dist/omezarr-tilesource.umd.cjs"
     }
@@ -45,6 +47,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@microsoft/api-extractor": "^7.58.2",
     "@trivago/prettier-plugin-sort-imports": "^6.0.2",
     "@types/openseadragon": "^5.0.2",
     "@vitest/coverage-v8": "^4.1.4",
@@ -56,6 +59,7 @@
     "prettier": "^3.8.2",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.58.1",
+    "unplugin-dts": "1.0.0-beta.6",
     "vite": "^7.3.2",
     "vite-plugin-node-polyfills": "^0.24.0",
     "vitest": "^4.1.4"

@@ -1,3 +1,4 @@
+import dts from "unplugin-dts/vite";
 import { defineConfig } from "vite";
 import { nodePolyfills } from "vite-plugin-node-polyfills";
 
@@ -20,7 +21,7 @@ export default defineConfig(({ mode }) => {
         },
         chunkSizeWarningLimit: 2048,
       },
-      plugins: [nodePolyfills()],
+      plugins: [nodePolyfills(), dts({ bundleTypes: true })],
     };
   }
   return {

@@ -4,7 +4,13 @@ import { defineConfig, globalIgnores } from "eslint/config";
 import tseslint from "typescript-eslint";
 
 export default defineConfig(
-  globalIgnores(["**/coverage", "**/dist", "**/node_modules", "**/public"]),
+  globalIgnores([
+    "**/build",
+    "**/coverage",
+    "**/dist",
+    "**/node_modules",
+    "**/public",
+  ]),
   eslint.configs.recommended,
   tseslint.configs.recommendedTypeChecked,
   {
