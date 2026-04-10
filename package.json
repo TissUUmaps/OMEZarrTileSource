@@ -33,8 +33,8 @@
     "fmt:check": "prettier --check --ignore-unknown .",
     "test": "vitest run --passWithNoTests --coverage",
     "dev": "vite",
-    "build": "tsc -b && vite build",
-    "build:lib": "tsc -b && vite build --mode library",
+    "build": "tsc && vite build",
+    "build:lib": "tsc && vite build --mode library",
     "preview": "vite preview"
   },
   "dependencies": {
