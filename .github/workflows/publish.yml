@@ -35,4 +35,4 @@ jobs:
       - name: Build library
         run: pnpm run build:lib
       - name: Publish to npm
-        run: pnpm publish --provenance --access public
+        run: pnpm publish --provenance --access public --no-git-checks
