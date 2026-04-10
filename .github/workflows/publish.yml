@@ -12,14 +12,18 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: latest
       - name: Set up Node
         uses: actions/setup-node@v6
         with:
-          cache: npm
+          cache: pnpm
           node-version: lts/*
           registry-url: https://registry.npmjs.org
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
       - name: Verify version
         run: |
           TAG_VERSION=${GITHUB_REF#refs/tags/v}
@@ -29,6 +33,6 @@ jobs:
             exit 1
           fi
       - name: Build library
-        run: npm run build:lib
-      - name: Publish to NPM
-        run: npm publish --provenance --access public
+        run: pnpm run build:lib
+      - name: Publish to npm
+        run: pnpm publish --provenance --access public

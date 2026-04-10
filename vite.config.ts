@@ -2,12 +2,8 @@ import { defineConfig } from "vite";
 import { nodePolyfills } from "vite-plugin-node-polyfills";
 
 export default defineConfig(({ mode }) => {
-  const sharedConfig = {
-    plugins: [nodePolyfills()],
-  };
   if (mode === "library") {
     return {
-      ...sharedConfig,
       build: {
         lib: {
           entry: "src/main.ts",
@@ -22,11 +18,16 @@ export default defineConfig(({ mode }) => {
             },
           },
         },
+        chunkSizeWarningLimit: 2048,
       },
+      plugins: [nodePolyfills()],
     };
   }
   return {
-    ...sharedConfig,
     base: "",
+    build: {
+      chunkSizeWarningLimit: 2048,
+    },
+    plugins: [nodePolyfills()],
   };
 });

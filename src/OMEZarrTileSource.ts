@@ -1,7 +1,17 @@
-import * as zarr from "zarrita";
-import { renderImage, type Multiscale, type Omero } from "ome-zarr.js";
 import { ZipFileStore } from "@zarrita/storage";
+import { type Multiscale, type Omero, renderImage } from "ome-zarr.js";
 import OpenSeadragon from "openseadragon";
+import * as zarr from "zarrita";
+
+type OMEZarrTileSourceClass = typeof OMEZarrTileSource;
+declare module "openseadragon" {
+  let OMEZarrTileSource: OMEZarrTileSourceClass;
+}
+
+type UserData = {
+  abortController?: AbortController;
+  img?: HTMLImageElement;
+};
 
 export interface OMEZarrTileSourceOptions {
   type?: "ome-zarr";
@@ -42,14 +52,14 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
   constructor(config: string | OMEZarrTileSourceOptions) {
     if (typeof config === "string") {
       super(
-        // @ts-ignore URL string
-        config
+        // @ts-expect-error URL string
+        config,
       ); // invokes getImageInfo
       this.url = config;
     } else {
       super(
-        // @ts-ignore URL string
-        config.url
+        // @ts-expect-error URL string
+        config.url,
       ); // invokes getImageInfo
       this.url = config.url;
       this.zip = config.zip;
@@ -72,7 +82,7 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
   configure(
     data: string | object | object[] | Document,
     _url: string,
-    postData: string | null = null
+    postData: string | null = null,
   ): OMEZarrTileSourceOptions {
     if (Array.isArray(data)) {
       throw new Error("configuration from array is not supported");
@@ -109,13 +119,13 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
     zarr
       .open(store, { kind: "group" })
       .then(async (group) => {
-        console.debug(`opened group for ${url}: ${group}`);
+        console.debug(`opened group for ${url}`);
         const { multiscale, omero } = OMEZarrTileSource._getMultiscale(group);
         const axisIndices = OMEZarrTileSource._getAxisIndices(multiscale);
         const arrays = await Promise.all(
           multiscale.datasets.map((dataset) =>
-            zarr.open(group.resolve(dataset.path), { kind: "array" })
-          )
+            zarr.open(group.resolve(dataset.path), { kind: "array" }),
+          ),
         );
         console.debug(`opened ${arrays.length} arrays for ${url}`);
         const maxWidth = arrays[0]!.shape[axisIndices.x]!;
@@ -207,11 +217,13 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
   }
 
   downloadTileStart(context: OpenSeadragon.ImageJob): void {
+    const userData = context.userData as UserData;
     const abortController = new AbortController();
-    context.userData.abortController = abortController;
+    userData.abortController = abortController;
     const urlSearchParams = new URLSearchParams(
-      // @ts-ignore OpenSeadragon.ImageJob.src
-      context.src
+      // @ts-expect-error OpenSeadragon.ImageJob.src
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+      context.src,
     );
     const level = +urlSearchParams.get("level")!;
     const x = +urlSearchParams.get("x")!;
@@ -225,9 +237,7 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
         throw new Error("tile source not ready");
       }
       console.debug(
-        `downloading tile for level=${level}, x=${x}, y=${y} from dataset ${
-          this.maxLevel - level
-        }`
+        `downloading tile for level=${level}, x=${x}, y=${y} from dataset ${this.maxLevel - level}`,
       );
       const tileWidth = this.getTileWidth(level);
       const tileHeight = this.getTileHeight(level);
@@ -246,14 +256,18 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
           console.debug(`rendered tile for level=${level}, x=${x}, y=${y}`);
           const img = await new Promise<HTMLImageElement>((resolve, reject) => {
             const img = new Image();
-            context.userData.img = img;
+            userData.img = img;
             img.onload = () => resolve(img);
-            img.onerror = (reason) => reject(reason);
+            img.onerror = (reason) =>
+              reject(new Error(String(reason as unknown)));
             img.onabort = () => {
               if (!abortController.signal.aborted) {
                 abortController.abort();
               }
-              reject(abortController.signal.reason);
+              const reason = abortController.signal.reason as unknown;
+              reject(
+                reason instanceof Error ? reason : new Error(String(reason)),
+              );
             };
             img.src = dataUrl;
           });
@@ -264,7 +278,7 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
         .catch((reason) => {
           if (abortController.signal.aborted) {
             console.debug(
-              `aborted tile rendering for level=${level}, x=${x}, y=${y}`
+              `aborted tile rendering for level=${level}, x=${x}, y=${y}`,
             );
           } else {
             const message = `failed to render tile for level=${level}, x=${x}, y=${y}: ${reason}`;
@@ -273,30 +287,31 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
           }
         });
     } catch (error) {
-      const message = `failed to download tile for level=${level}, x=${x}, y=${y}: ${error}`;
+      const message = `failed to download tile for level=${level}, x=${x}, y=${y}: ${String(error)}`;
       console.error(message);
       context.finish(null, OMEZarrTileSource.DUMMY_XHR, message);
     }
   }
 
   downloadTileAbort(context: OpenSeadragon.ImageJob): void {
-    if (context.userData.abortController !== undefined) {
-      (context.userData.abortController as AbortController).abort();
-      context.userData.abortController = undefined;
+    const userData = context.userData as UserData;
+    if (userData.abortController !== undefined) {
+      userData.abortController.abort();
+      userData.abortController = undefined;
     }
-    if (context.userData.img !== undefined) {
-      (context.userData.img as HTMLImageElement).src = "";
-      context.userData.img = undefined;
+    if (userData.img !== undefined) {
+      userData.img.src = "";
+      userData.img = undefined;
     }
   }
 
   static enable(os: typeof OpenSeadragon = OpenSeadragon): void {
-    (os as any).OMEZarrTileSource = OMEZarrTileSource;
+    os.OMEZarrTileSource = OMEZarrTileSource;
   }
 
   // TODO https://github.com/BioNGFF/ome-zarr.js/pull/27
   private static _getMultiscale<T extends zarr.Readable>(
-    group: zarr.Group<T>
+    group: zarr.Group<T>,
   ): { multiscale: Multiscale; omero?: Omero } {
     if (!("ome" in group.attrs)) {
       throw new Error("missing OME-Zarr metadata in attributes");
