@@ -23,7 +23,7 @@ jobs:
           node-version: lts/*
           registry-url: https://registry.npmjs.org
       - name: Install dependencies
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
       - name: Verify version
         run: |
           TAG_VERSION=${GITHUB_REF#refs/tags/v}

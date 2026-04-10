@@ -30,7 +30,7 @@ jobs:
           cache: pnpm
           node-version: lts/*
       - name: Install dependencies
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
       - name: Build
         run: pnpm run build
       - name: Setup Pages
