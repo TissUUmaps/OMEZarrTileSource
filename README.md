@@ -16,10 +16,10 @@ OpenSeadragon 5 or newer
 
 ## Installation
 
-Using npm:
+Using pnpm:
 
 ```sh
-npm install omezarr-tilesource
+pnpm add omezarr-tilesource
 ```
 
 ## Usage

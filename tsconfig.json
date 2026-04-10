@@ -21,7 +21,9 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true,
-    "noUncheckedIndexedAccess": true
+    "noUncheckedIndexedAccess": true,
+
+    "allowJs": true
   },
-  "include": ["vite.config.ts", "src"]
+  "include": ["vite.config.ts", "eslint.config.js", "src"]
 }
