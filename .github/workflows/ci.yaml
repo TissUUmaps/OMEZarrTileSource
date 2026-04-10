@@ -1,0 +1,76 @@
+name: ci
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  check-format:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: latest
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          cache: pnpm
+          node-version: lts/*
+      - name: Install dependencies
+        run: pnpm install
+      - name: Check formatting
+        run: pnpm run fmt:check
+  lint:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: latest
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          cache: pnpm
+          node-version: lts/*
+      - name: Install dependencies
+        run: pnpm install
+      - name: Run linter
+        run: pnpm run lint
+  test:
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: latest
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          cache: pnpm
+          node-version: lts/*
+      - name: Install dependencies
+        run: pnpm install
+      - name: Run tests
+        run: pnpm run test
+      - name: Upload coverage
+        uses: codecov/codecov-action@v5
+        with:
+          directory: coverage
+          fail_ci_if_error: true
+          flags: unittests
+          token: ${{ secrets.CODECOV_TOKEN }}
