@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - CI workflow
+- Emit type declarations
 - pnpm, eslint, prettier, vitest + coverage, husky + lint-staged
 
 ### Changed
