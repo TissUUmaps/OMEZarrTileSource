@@ -3,7 +3,7 @@ import { type Multiscale, type Omero, renderImage } from "ome-zarr.js";
 import OpenSeadragon from "openseadragon";
 import * as zarr from "zarrita";
 
-type OMEZarrTileSourceClass = typeof OMEZarrTileSource;
+export type OMEZarrTileSourceClass = typeof OMEZarrTileSource;
 declare module "openseadragon" {
   let OMEZarrTileSource: OMEZarrTileSourceClass;
 }
