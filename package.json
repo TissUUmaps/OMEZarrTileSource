@@ -68,6 +68,11 @@
     "**/*.{js,ts}": "eslint --fix",
     "**/*": "prettier --write --ignore-unknown"
   },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  },
   "engines": {
     "node": ">=20.19.0"
   }
