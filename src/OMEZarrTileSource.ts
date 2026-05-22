@@ -150,6 +150,8 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
         this._multiscale = undefined;
         this._axisIndices = undefined;
         this._arrays = undefined;
+        this.width = 0;
+        this.height = 0;
         this.aspectRatio = 1;
         this.dimensions = new OpenSeadragon.Point(10, 10);
         this.maxLevel = 0;
