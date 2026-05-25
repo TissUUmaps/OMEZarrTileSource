@@ -68,6 +68,6 @@
     "**/*": "prettier --write --ignore-unknown"
   },
   "engines": {
-    "node": ">=20.19.0"
+    "node": ">=22.22.1"
   }
 }
