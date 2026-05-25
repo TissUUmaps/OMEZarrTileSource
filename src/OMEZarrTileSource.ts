@@ -313,19 +313,19 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
   private static _getMultiscale<T extends zarr.Readable>(
     group: zarr.Group<T>,
   ): { multiscale: Multiscale; omero?: Omero } {
-    if (!("ome" in group.attrs)) {
-      throw new Error("missing OME-Zarr metadata in attributes");
+    let metadata = group.attrs as Record<string, unknown>;
+    if ("ome" in metadata) {
+      metadata = metadata["ome"] as Record<string, unknown>;
     }
-    const ome = group.attrs["ome"] as Record<string, unknown>;
-    if (!("multiscales" in ome)) {
-      throw new Error("missing multiscales metadata in OME-Zarr metadata");
+    if (!("multiscales" in metadata)) {
+      throw new Error("missing OME-Zarr multiscales metadata");
     }
-    const multiscales = ome["multiscales"] as Multiscale[];
+    const multiscales = metadata["multiscales"] as Multiscale[];
     if (multiscales.length === 0) {
-      throw new Error("empty multiscales metadata in OME-Zarr metadata");
+      throw new Error("empty OME-Zarr multiscales metadata");
     }
     const multiscale = multiscales[0]!;
-    const omero = "omero" in ome ? (ome["omero"] as Omero) : undefined;
+    const omero = metadata["omero"] as Omero | undefined;
     return { multiscale, omero };
   }
 
