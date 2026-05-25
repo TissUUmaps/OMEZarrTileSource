@@ -17,7 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- OME-Zarr v0.5 support
+- Support for pnpm 11
+- Support for OME-Zarr v0.5
 
 ## [0.1.1] - 2026-04-10
 

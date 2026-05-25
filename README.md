@@ -54,7 +54,7 @@ const tileSource4 = new OMEZarrTileSource({
     // t: undefined,
     // c: undefined,
     // z: undefined
-})
+});
 
 const viewer = OpenSeadragon(
     ...
