@@ -38,31 +38,30 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@zarrita/storage": "^0.1.4",
-    "ome-zarr.js": "^0.0.17",
+    "@zarrita/storage": "^0.2.0",
+    "ome-zarr.js": "^0.0.19",
     "zarrita": "^0.5.4"
   },
   "peerDependencies": {
-    "openseadragon": "^5.0.1"
+    "openseadragon": ">=5.0.1"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@microsoft/api-extractor": "^7.58.2",
+    "@microsoft/api-extractor": "^7.58.7",
     "@trivago/prettier-plugin-sort-imports": "^6.0.2",
-    "@types/openseadragon": "^5.0.2",
-    "@vitest/coverage-v8": "^4.1.4",
-    "eslint": "^10.2.0",
+    "@vitest/coverage-v8": "^4.1.7",
+    "eslint": "^10.4.0",
     "eslint-config-prettier": "^10.1.8",
     "husky": "^9.1.7",
-    "lint-staged": "^16.4.0",
-    "openseadragon": "^5.0.1",
-    "prettier": "^3.8.2",
-    "typescript": "^5.9.3",
-    "typescript-eslint": "^8.58.1",
-    "unplugin-dts": "1.0.0-beta.6",
-    "vite": "^7.3.2",
-    "vite-plugin-node-polyfills": "^0.24.0",
-    "vitest": "^4.1.4"
+    "lint-staged": "^17.0.5",
+    "openseadragon": ">=5.0.1",
+    "prettier": "^3.8.3",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.59.4",
+    "unplugin-dts": "1.0.1",
+    "vite": "^8.0.14",
+    "vite-plugin-node-polyfills": "^0.28.0",
+    "vitest": "^4.1.7"
   },
   "lint-staged": {
     "**/*.{js,ts}": "eslint --fix",
