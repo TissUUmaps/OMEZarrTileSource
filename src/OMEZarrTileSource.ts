@@ -27,8 +27,8 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
 
   // properties inherited from/required by OpenSeadragon.TileSource
   readonly url: string;
-  width: number = 10;
-  height: number = 10;
+  width: number = 10; // required starting from OpenSeadragon 6 (previously optional)
+  height: number = 10; // required starting from OpenSeadragon 6 (previously optional)
   aspectRatio: number = 1;
   dimensions: OpenSeadragon.Point = new OpenSeadragon.Point(10, 10);
   maxLevel: number = 0;
