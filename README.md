@@ -30,33 +30,39 @@ import { OMEZarrTileSource } from "omezarr-tilesource";
 
 const url = ...;
 
-// only necessary when using inline tile source configuration (see below)
+// configuration with URL (only works with zipped OME-Zarr URLs ending with .ozx)
+const tileSource1 = url;
+
+// inline configuration with options object (requires prior enabling, see below)
 OMEZarrTileSource.enable(OpenSeadragon);
+const tileSource2 = {
+    type: "ome-zarr",
+    url: url,
+    // zip: undefined,  // undefined = OME-Zarr ZIP auto-detection based on .ozx suffix
+    // t: undefined,
+    // c: undefined,
+    // z: undefined
+};
+
+// direct instantiation with URL (works with any OME-Zarr storage backend)
+const tileSource3 = new OMEZarrTileSource(url);
+
+// direct instantiation with options object (no prior enabling required)
+const tileSource4 = new OMEZarrTileSource({
+    url: url,
+    // zip: undefined,  // undefined = OME-Zarr ZIP auto-detection based on .ozx suffix
+    // t: undefined,
+    // c: undefined,
+    // z: undefined
+});
 
 const viewer = OpenSeadragon(
     ...
     tileSources: [
-        // configuration with a URL string (only works with OME-Zarr ZIP URLs ending with .ozx)
-        url,
-        // inline configuration with an options object (requires prior enabling, see above)
-        {
-            type: "ome-zarr",
-            url: url,
-            // zip: undefined,  // undefined = OME-Zarr ZIP auto-detection based on .ozx suffix
-            // t: undefined,
-            // c: undefined,
-            // z: undefined
-        },
-        // direct instantiation with a URL string (works with any OME-Zarr storage backend)
-        new OMEZarrTileSource(url),
-        // direct instantiation with an options object (no prior enabling required)
-        new OMEZarrTileSource({
-            url: url,
-            // zip: undefined,  // undefined = OME-Zarr ZIP auto-detection based on .ozx suffix
-            // t: undefined,
-            // c: undefined,
-            // z: undefined
-        })
+        tileSource1,
+        tileSource2,
+        tileSource3,
+        tileSource4
     ]
 );
 ```
