@@ -27,6 +27,8 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
 
   // properties inherited from/required by OpenSeadragon.TileSource
   readonly url: string;
+  width: number = 10; // required starting from OpenSeadragon 6 (previously optional)
+  height: number = 10; // required starting from OpenSeadragon 6 (previously optional)
   aspectRatio: number = 1;
   dimensions: OpenSeadragon.Point = new OpenSeadragon.Point(10, 10);
   maxLevel: number = 0;
@@ -51,16 +53,10 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
   constructor(options: OMEZarrTileSourceOptions);
   constructor(config: string | OMEZarrTileSourceOptions) {
     if (typeof config === "string") {
-      super(
-        // @ts-expect-error URL string
-        config,
-      ); // invokes getImageInfo
+      super(config); // invokes getImageInfo
       this.url = config;
     } else {
-      super(
-        // @ts-expect-error URL string
-        config.url,
-      ); // invokes getImageInfo
+      super(config.url); // invokes getImageInfo
       this.url = config.url;
       this.zip = config.zip;
       this.t = config.t;
@@ -134,6 +130,8 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
         this._multiscale = multiscale;
         this._axisIndices = axisIndices;
         this._arrays = arrays;
+        this.width = maxWidth;
+        this.height = maxHeight;
         this.aspectRatio = maxWidth / maxHeight;
         this.dimensions = new OpenSeadragon.Point(maxWidth, maxHeight);
         this.maxLevel = arrays.length - 1;
@@ -146,6 +144,8 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
         this._multiscale = undefined;
         this._axisIndices = undefined;
         this._arrays = undefined;
+        this.width = 10;
+        this.height = 10;
         this.aspectRatio = 1;
         this.dimensions = new OpenSeadragon.Point(10, 10);
         this.maxLevel = 0;
@@ -220,11 +220,7 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
     const userData = context.userData as UserData;
     const abortController = new AbortController();
     userData.abortController = abortController;
-    const urlSearchParams = new URLSearchParams(
-      // @ts-expect-error OpenSeadragon.ImageJob.src
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-      context.src,
-    );
+    const urlSearchParams = new URLSearchParams(context.src);
     const level = +urlSearchParams.get("level")!;
     const x = +urlSearchParams.get("x")!;
     const y = +urlSearchParams.get("y")!;
@@ -258,8 +254,7 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
             const img = new Image();
             userData.img = img;
             img.onload = () => resolve(img);
-            img.onerror = (reason) =>
-              reject(new Error(String(reason as unknown)));
+            img.onerror = (reason) => reject(new Error(reason as string));
             img.onabort = () => {
               if (!abortController.signal.aborted) {
                 abortController.abort();
@@ -273,7 +268,7 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
           });
           abortController.signal.throwIfAborted();
           console.debug(`loaded tile for level=${level}, x=${x}, y=${y}`);
-          context.finish(img, OMEZarrTileSource.DUMMY_XHR, "");
+          context.finish(img, OMEZarrTileSource.DUMMY_XHR, "image");
         })
         .catch((reason) => {
           if (abortController.signal.aborted) {
@@ -283,13 +278,13 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
           } else {
             const message = `failed to render tile for level=${level}, x=${x}, y=${y}: ${reason}`;
             console.error(message);
-            context.finish(null, OMEZarrTileSource.DUMMY_XHR, message);
+            context.fail(message, OMEZarrTileSource.DUMMY_XHR);
           }
         });
     } catch (error) {
       const message = `failed to download tile for level=${level}, x=${x}, y=${y}: ${String(error)}`;
       console.error(message);
-      context.finish(null, OMEZarrTileSource.DUMMY_XHR, message);
+      context.fail(message, OMEZarrTileSource.DUMMY_XHR);
     }
   }
 
