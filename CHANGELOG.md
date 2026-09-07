@@ -9,9 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `dataType` option (`"context2d"` or `"zarrChunk"`) to configure the data type produced by the tile source
+- `zarrChunk` OpenSeadragon data type for accessing the raw zarr data of a tile, with a `zarrChunk` → `context2d` converter
+
 ### Changed
 
+- Tiles are produced as `context2d` (OpenSeadragon 6 data pipeline) instead of `image` (PNG data URL)
+- Updated ome-zarr.js to 0.0.20 (`renderArray` API) and zarrita to 0.7.5
+- Missing channel window `start`/`end` values are derived once from the smallest resolution level instead of per tile
+- The `c` option now restricts rendering to the selected channel
+- Requires OpenSeadragon 6 or newer
+- Import `ZipFileStore` from `@zarrita/storage/zip` so that Node-only stores are no longer bundled
+
 ### Removed
+
+- Support for OpenSeadragon 5
+- `vite-plugin-node-polyfills` build dependency (no longer needed)
 
 ## [0.2.0] - 2026-05-25
 

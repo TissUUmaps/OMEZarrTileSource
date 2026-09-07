@@ -39,11 +39,11 @@
   },
   "dependencies": {
     "@zarrita/storage": "0.2.0",
-    "ome-zarr.js": "0.0.19",
-    "zarrita": "0.5.4"
+    "ome-zarr.js": "0.0.20",
+    "zarrita": "0.7.5"
   },
   "peerDependencies": {
-    "openseadragon": ">=5.0.1 <7.0.0"
+    "openseadragon": ">=6.0.0 <7.0.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -54,13 +54,12 @@
     "eslint-config-prettier": "^10.1.8",
     "husky": "^9.1.7",
     "lint-staged": "^17.0.5",
-    "openseadragon": ">=5.0.1 <7.0.0",
+    "openseadragon": ">=6.0.0 <7.0.0",
     "prettier": "^3.8.3",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.59.4",
     "unplugin-dts": "1.0.1",
     "vite": "^8.0.14",
-    "vite-plugin-node-polyfills": "^0.28.0",
     "vitest": "^4.1.7"
   },
   "lint-staged": {

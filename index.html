@@ -8,7 +8,16 @@
 
   <body>
     <h1>OMEZarrTileSource</h1>
+    <h2>Rendered by the tile source (<code>dataType: "context2d"</code>)</h2>
     <div id="viewer" style="width: 1280px; height: 1024px"></div>
+    <h2>Raw data (<code>dataType: "zarrChunk"</code>)</h2>
+    <p>
+      Tiles are delivered as zarrita chunks; OpenSeadragon renders them via the
+      registered <code>zarrChunk &rarr; context2d</code> converter. Open the
+      console to see the chunk shapes logged by the
+      <code>tile-invalidated</code> handler.
+    </p>
+    <div id="raw-viewer" style="width: 1280px; height: 1024px"></div>
     <script type="module">
       import OpenSeadragon from "openseadragon";
 
@@ -17,17 +26,42 @@
 
       OMEZarrTileSource.enable(OpenSeadragon);
 
+      const url =
+        "https://livingobjects.ebi.ac.uk/idr/zarr/v0.5/idr0062A/6001240_labels.zarr";
+
       new OpenSeadragon.Viewer({
         id: "viewer",
         tileSources: {
           type: "ome-zarr",
-          url: "https://livingobjects.ebi.ac.uk/idr/zarr/v0.5/idr0062A/6001240_labels.zarr",
+          url: url,
           z: 128,
         },
         prefixUrl: "https://openseadragon.github.io/openseadragon/images/",
         timeout: 60000, // increase timeout for large images,
         minZoomImageRatio: 0, // allow zooming out indefinitely
         maxZoomPixelRatio: Infinity, // allow zooming in indefinitely
+      });
+
+      const rawViewer = new OpenSeadragon.Viewer({
+        id: "raw-viewer",
+        tileSources: {
+          type: "ome-zarr",
+          url: url,
+          z: 128,
+          dataType: "zarrChunk",
+        },
+        prefixUrl: "https://openseadragon.github.io/openseadragon/images/",
+        timeout: 60000,
+        minZoomImageRatio: 0,
+        maxZoomPixelRatio: Infinity,
+      });
+
+      rawViewer.addHandler("tile-invalidated", async (event) => {
+        // zarrita chunk with the same rank as the array (axes as in the multiscales metadata)
+        const chunk = await event.getData("zarrChunk");
+        console.log(
+          `tile ${event.tile.toString()}: shape=[${chunk.shape}] dtype=${chunk.data.constructor.name}`,
+        );
       });
     </script>
   </body>

@@ -1,30 +1,75 @@
-import { ZipFileStore } from "@zarrita/storage";
-import { type Multiscale, type Omero, renderImage } from "ome-zarr.js";
+import { NgffImage, getMinMaxValues } from "ome-zarr.js";
 import OpenSeadragon from "openseadragon";
 import * as zarr from "zarrita";
 
+import { toContext2D } from "./utils/canvas";
+import {
+  type Axis,
+  getActiveChannels,
+  isAxis,
+  renderPlanes,
+} from "./utils/ngff";
+import {
+  type ZarrArray,
+  type ZarrChunk,
+  copyChunk,
+  getPlane,
+  openStore,
+} from "./utils/zarr";
+
+/** Constructor type of {@link OMEZarrTileSource}. */
 export type OMEZarrTileSourceClass = typeof OMEZarrTileSource;
 declare module "openseadragon" {
+  /** Set by {@link OMEZarrTileSource.enable}. */
   let OMEZarrTileSource: OMEZarrTileSourceClass;
 }
 
-type UserData = {
-  abortController?: AbortController;
-  img?: HTMLImageElement;
-};
-
+/** Options for {@link OMEZarrTileSource}. */
 export interface OMEZarrTileSourceOptions {
+  /** Tile source type, required for inline configuration in OpenSeadragon. */
   type?: "ome-zarr";
-  url: string; // TileSource.url
+  /** URL of the OME-Zarr image, i.e. the group holding the `multiscales` metadata. */
+  url: string;
+  /**
+   * Whether the image is a zipped OME-Zarr (`.ozx`) to be read via HTTP range
+   * requests. Detected from the `.ozx` suffix if omitted.
+   */
   zip?: boolean;
+  /** Time point to show; the omero default or the middle plane if omitted. */
   t?: number;
+  /** Channel to render; all channels marked active in the omero metadata if omitted. */
   c?: number;
+  /** Z-slice to show; the omero default or the middle plane if omitted. */
   z?: number;
+  /**
+   * Data type produced per tile:
+   * - `"context2d"` (default): tiles rendered by ome-zarr.js according to the
+   *   omero metadata, as `CanvasRenderingContext2D`.
+   * - `"zarrChunk"`: raw zarrita chunks of the tile region, with the same rank
+   *   as the image arrays (fixed t/z/c axes have length 1). OpenSeadragon
+   *   renders them via the converter learned by
+   *   {@link OMEZarrTileSource.learnDataTypes}.
+   */
+  dataType?: "context2d" | "zarrChunk";
 }
 
-export class OMEZarrTileSource extends OpenSeadragon.TileSource {
-  static readonly DUMMY_XHR = new XMLHttpRequest();
+/** Per-tile state stored on OpenSeadragon's ImageJob. */
+type UserData = {
+  abortController?: AbortController;
+};
 
+/** OpenSeadragon instances whose converter already knows the data types. */
+const learnedOpenSeadragons = new WeakSet<typeof OpenSeadragon>();
+
+/**
+ * OpenSeadragon tile source for OME-Zarr images (v0.4 and v0.5).
+ *
+ * Each resolution level of the image is one OpenSeadragon level (level 0 being
+ * the smallest), tiled by the zarr chunk size. Tiles are either rendered with
+ * ome-zarr.js or delivered as raw zarrita chunks, see
+ * {@link OMEZarrTileSourceOptions.dataType}.
+ */
+export class OMEZarrTileSource extends OpenSeadragon.TileSource {
   // properties inherited from/required by OpenSeadragon.TileSource
   readonly url: string;
   width: number = 10; // required starting from OpenSeadragon 6 (previously optional)
@@ -34,37 +79,42 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
   maxLevel: number = 0;
   ready: boolean = false;
 
+  /** See {@link OMEZarrTileSourceOptions.zip}. */
   readonly zip?: boolean;
+  /** See {@link OMEZarrTileSourceOptions.t}. */
   readonly t?: number;
+  /** See {@link OMEZarrTileSourceOptions.c}. */
   readonly c?: number;
+  /** See {@link OMEZarrTileSourceOptions.z}. */
   readonly z?: number;
-  private _omero?: Omero;
-  private _multiscale?: Multiscale;
-  private _axisIndices?: {
-    t?: number;
-    c?: number;
-    z?: number;
-    y: number;
-    x: number;
+  /** See {@link OMEZarrTileSourceOptions.dataType}. */
+  readonly dataType: "context2d" | "zarrChunk";
+  /** Loaded image, its axes and arrays by level (smallest first); set once ready. */
+  private _image?: {
+    img: NgffImage;
+    axes: Axis[];
+    arrays: ZarrArray[];
   };
-  private _arrays?: zarr.Array<zarr.DataType>[];
 
+  /**
+   * Creates a tile source and starts loading the image, see
+   * {@link getImageInfo}.
+   */
   constructor(url: string);
   constructor(options: OMEZarrTileSourceOptions);
   constructor(config: string | OMEZarrTileSourceOptions) {
-    if (typeof config === "string") {
-      super(config); // invokes getImageInfo
-      this.url = config;
-    } else {
-      super(config.url); // invokes getImageInfo
-      this.url = config.url;
-      this.zip = config.zip;
-      this.t = config.t;
-      this.c = config.c;
-      this.z = config.z;
-    }
+    const options = typeof config === "string" ? { url: config } : config;
+    super(options.url); // invokes getImageInfo
+    this.url = options.url;
+    this.zip = options.zip;
+    this.t = options.t;
+    this.c = options.c;
+    this.z = options.z;
+    this.dataType = options.dataType ?? "context2d";
+    OMEZarrTileSource.learnDataTypes();
   }
 
+  /** Whether `data` is a `.ozx` URL or an inline `{ type: "ome-zarr" }` configuration. */
   supports(data: string | object | object[] | Document): boolean {
     if (Array.isArray(data) || data instanceof Document) {
       return false;
@@ -75,6 +125,7 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
     return "type" in data && data.type === "ome-zarr";
   }
 
+  /** Normalizes a supported inline configuration to {@link OMEZarrTileSourceOptions}. */
   configure(
     data: string | object | object[] | Document,
     _url: string,
@@ -95,6 +146,7 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
     return { type: "ome-zarr", ...(data as OMEZarrTileSourceOptions) };
   }
 
+  /** Whether `other` is an OME-Zarr tile source with the same options. */
   equals(other: OpenSeadragon.TileSource): boolean {
     return (
       other instanceof OMEZarrTileSource &&
@@ -102,53 +154,24 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
       this.zip === other.zip &&
       this.t === other.t &&
       this.c === other.c &&
-      this.z === other.z
+      this.z === other.z &&
+      this.dataType === other.dataType
     );
   }
 
+  /**
+   * Loads the image metadata and arrays, then raises `ready`, or `open-failed`
+   * on error. Called by OpenSeadragon upon construction.
+   */
   getImageInfo(url: string): void {
     console.debug(`getting image info for ${url}`);
-    const store =
-      this.zip || (this.zip === undefined && url.endsWith(".ozx"))
-        ? ZipFileStore.fromUrl(url)
-        : new zarr.FetchStore(url);
-    zarr
-      .open(store, { kind: "group" })
-      .then(async (group) => {
-        console.debug(`opened group for ${url}`);
-        const { multiscale, omero } = OMEZarrTileSource._getMultiscale(group);
-        const axisIndices = OMEZarrTileSource._getAxisIndices(multiscale);
-        const arrays = await Promise.all(
-          multiscale.datasets.map((dataset) =>
-            zarr.open(group.resolve(dataset.path), { kind: "array" }),
-          ),
-        );
-        console.debug(`opened ${arrays.length} arrays for ${url}`);
-        const maxWidth = arrays[0]!.shape[axisIndices.x]!;
-        const maxHeight = arrays[0]!.shape[axisIndices.y]!;
-        this._omero = omero;
-        this._multiscale = multiscale;
-        this._axisIndices = axisIndices;
-        this._arrays = arrays;
-        this.width = maxWidth;
-        this.height = maxHeight;
-        this.aspectRatio = maxWidth / maxHeight;
-        this.dimensions = new OpenSeadragon.Point(maxWidth, maxHeight);
-        this.maxLevel = arrays.length - 1;
-        this.ready = true;
+    this._open(url)
+      .then(() => {
         console.debug(`ready for ${url}`);
         this.raiseEvent("ready", { tileSource: this });
       })
       .catch((reason) => {
-        this._omero = undefined;
-        this._multiscale = undefined;
-        this._axisIndices = undefined;
-        this._arrays = undefined;
-        this.width = 10;
-        this.height = 10;
-        this.aspectRatio = 1;
-        this.dimensions = new OpenSeadragon.Point(10, 10);
-        this.maxLevel = 0;
+        this._image = undefined;
         this.ready = false;
         const message = `failed to get image info for ${url}: ${reason}`;
         console.error(message);
@@ -156,211 +179,286 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
       });
   }
 
+  /** Tile width at `level`, i.e. the chunk size of its array along x. */
   getTileWidth(level: number): number {
-    if (this._axisIndices === undefined || this._arrays === undefined) {
-      throw new Error("tile source not ready");
-    }
-    if (level < 0 || level > this.maxLevel) {
-      throw new Error("level out of bounds");
-    }
-    const array = this._arrays[this.maxLevel - level]!;
-    return array.chunks[this._axisIndices.x]!;
+    return this._getArray(level).chunks[this._axis("x")]!;
   }
 
+  /** Tile height at `level`, i.e. the chunk size of its array along y. */
   getTileHeight(level: number): number {
-    if (this._axisIndices === undefined || this._arrays === undefined) {
-      throw new Error("tile source not ready");
-    }
-    if (level < 0 || level > this.maxLevel) {
-      throw new Error("level out of bounds");
-    }
-    const array = this._arrays[this.maxLevel - level]!;
-    return array.chunks[this._axisIndices.y]!;
+    return this._getArray(level).chunks[this._axis("y")]!;
   }
 
+  /** Width of `level` relative to the full resolution. */
   getLevelScale(level: number): number {
-    if (this._axisIndices === undefined || this._arrays === undefined) {
-      throw new Error("tile source not ready");
-    }
-    if (level < 0 || level > this.maxLevel) {
-      throw new Error("level out of bounds");
-    }
-    const array = this._arrays[this.maxLevel - level]!;
-    const arrayWidth = array.shape[this._axisIndices.x]!;
-    const maxWidth = this._arrays[0]!.shape[this._axisIndices.x]!;
-    return arrayWidth / maxWidth;
+    return this._getSize(level, "x") / this._getSize(this.maxLevel, "x");
   }
 
+  /** Tile identifier (`level=…&x=…&y=…`), parsed again by {@link downloadTileStart}. */
   getTileUrl(level: number, x: number, y: number): string {
-    const urlSearchParams = new URLSearchParams();
-    urlSearchParams.append("level", level.toString());
-    urlSearchParams.append("x", x.toString());
-    urlSearchParams.append("y", y.toString());
-    return urlSearchParams.toString();
+    return new URLSearchParams({
+      level: `${level}`,
+      x: `${x}`,
+      y: `${y}`,
+    }).toString();
   }
 
+  /** Cache key: the image URL plus tile coordinates, plane and data type. */
   getTileHashKey(level: number, x: number, y: number): string {
     const url = new URL(this.url);
-    url.searchParams.append("level", level.toString());
-    url.searchParams.append("x", x.toString());
-    url.searchParams.append("y", y.toString());
-    if (this.z !== undefined) {
-      url.searchParams.append("z", this.z.toString());
+    const params = { level, x, y, z: this.z, c: this.c, t: this.t };
+    for (const [name, value] of Object.entries(params)) {
+      if (value !== undefined) {
+        url.searchParams.append(name, `${value}`);
+      }
     }
-    if (this.c !== undefined) {
-      url.searchParams.append("c", this.c.toString());
-    }
-    if (this.t !== undefined) {
-      url.searchParams.append("t", this.t.toString());
-    }
+    url.searchParams.append("dataType", this.dataType);
     return url.toString();
   }
 
+  /**
+   * Loads the tile identified by `context.src` and finishes the job with data
+   * of type {@link dataType}. Abortable via {@link downloadTileAbort}.
+   */
   downloadTileStart(context: OpenSeadragon.ImageJob): void {
-    const userData = context.userData as UserData;
     const abortController = new AbortController();
-    userData.abortController = abortController;
-    const urlSearchParams = new URLSearchParams(context.src);
-    const level = +urlSearchParams.get("level")!;
-    const x = +urlSearchParams.get("x")!;
-    const y = +urlSearchParams.get("y")!;
-    try {
-      if (
-        this._multiscale === undefined ||
-        this._axisIndices === undefined ||
-        this._arrays === undefined
-      ) {
-        throw new Error("tile source not ready");
-      }
-      console.debug(
-        `downloading tile for level=${level}, x=${x}, y=${y} from dataset ${this.maxLevel - level}`,
-      );
-      const tileWidth = this.getTileWidth(level);
-      const tileHeight = this.getTileHeight(level);
-      const array = this._arrays[this.maxLevel - level]!;
-      const maxTileWidth = array.shape[this._axisIndices.x]!;
-      const maxTileHeight = array.shape[this._axisIndices.y]!;
-      renderImage(array, this._multiscale.axes, this._omero, {
-        x: [x * tileWidth, Math.min((x + 1) * tileWidth, maxTileWidth)],
-        y: [y * tileHeight, Math.min((y + 1) * tileHeight, maxTileHeight)],
-        z: this.z,
-        c: this.c,
-        t: this.t,
-      }) // TODO https://github.com/BioNGFF/ome-zarr.js/pull/26
-        .then(async (dataUrl) => {
-          abortController.signal.throwIfAborted();
-          console.debug(`rendered tile for level=${level}, x=${x}, y=${y}`);
-          const img = await new Promise<HTMLImageElement>((resolve, reject) => {
-            const img = new Image();
-            userData.img = img;
-            img.onload = () => resolve(img);
-            img.onerror = (reason) => reject(new Error(reason as string));
-            img.onabort = () => {
-              if (!abortController.signal.aborted) {
-                abortController.abort();
-              }
-              const reason = abortController.signal.reason as unknown;
-              reject(
-                reason instanceof Error ? reason : new Error(String(reason)),
-              );
-            };
-            img.src = dataUrl;
-          });
-          abortController.signal.throwIfAborted();
-          console.debug(`loaded tile for level=${level}, x=${x}, y=${y}`);
-          context.finish(img, OMEZarrTileSource.DUMMY_XHR, "image");
-        })
-        .catch((reason) => {
-          if (abortController.signal.aborted) {
-            console.debug(
-              `aborted tile rendering for level=${level}, x=${x}, y=${y}`,
-            );
-          } else {
-            const message = `failed to render tile for level=${level}, x=${x}, y=${y}: ${reason}`;
-            console.error(message);
-            context.fail(message, OMEZarrTileSource.DUMMY_XHR);
-          }
-        });
-    } catch (error) {
-      const message = `failed to download tile for level=${level}, x=${x}, y=${y}: ${String(error)}`;
-      console.error(message);
-      context.fail(message, OMEZarrTileSource.DUMMY_XHR);
-    }
+    (context.userData as UserData).abortController = abortController;
+    const params = new URLSearchParams(context.src);
+    const level = Number(params.get("level"));
+    const x = Number(params.get("x"));
+    const y = Number(params.get("y"));
+    const tile = `level=${level}, x=${x}, y=${y}`;
+    console.debug(`downloading tile for ${tile}`);
+    this._downloadTile(level, x, y, abortController.signal)
+      .then((data) => {
+        abortController.signal.throwIfAborted();
+        context.finish(data, null, this.dataType);
+      })
+      .catch((reason) => {
+        if (abortController.signal.aborted) {
+          console.debug(`aborted tile for ${tile}`);
+          return;
+        }
+        const message = `failed to download tile for ${tile}: ${reason}`;
+        console.error(message);
+        context.fail(message, null);
+      });
   }
 
+  /** Aborts a tile download started by {@link downloadTileStart}. */
   downloadTileAbort(context: OpenSeadragon.ImageJob): void {
-    const userData = context.userData as UserData;
-    if (userData.abortController !== undefined) {
-      userData.abortController.abort();
-      userData.abortController = undefined;
-    }
-    if (userData.img !== undefined) {
-      userData.img.src = "";
-      userData.img = undefined;
-    }
+    (context.userData as UserData).abortController?.abort();
   }
 
+  /**
+   * Registers the class as `OpenSeadragon.OMEZarrTileSource`, enabling inline
+   * `{ type: "ome-zarr" }` configuration, and learns the data types.
+   */
   static enable(os: typeof OpenSeadragon = OpenSeadragon): void {
     os.OMEZarrTileSource = OMEZarrTileSource;
+    OMEZarrTileSource.learnDataTypes(os);
   }
 
-  // TODO https://github.com/BioNGFF/ome-zarr.js/pull/27
-  private static _getMultiscale<T extends zarr.Readable>(
-    group: zarr.Group<T>,
-  ): { multiscale: Multiscale; omero?: Omero } {
-    let metadata = group.attrs as Record<string, unknown>;
-    if ("ome" in metadata) {
-      metadata = metadata["ome"] as Record<string, unknown>;
+  /**
+   * Teaches OpenSeadragon's data type converter the `"zarrChunk"` data type
+   * (see {@link OMEZarrTileSourceOptions.dataType}): how to copy it and how to
+   * render it to a `"context2d"` using the omero metadata of the tile's
+   * source. Called by the constructor and by {@link enable}; idempotent.
+   */
+  static learnDataTypes(os: typeof OpenSeadragon = OpenSeadragon): void {
+    if (learnedOpenSeadragons.has(os)) {
+      return;
     }
-    if (!("multiscales" in metadata)) {
-      throw new Error("missing OME-Zarr multiscales metadata");
-    }
-    const multiscales = metadata["multiscales"] as Multiscale[];
-    if (multiscales.length === 0) {
-      throw new Error("empty OME-Zarr multiscales metadata");
-    }
-    const multiscale = multiscales[0]!;
-    const omero = metadata["omero"] as Omero | undefined;
-    return { multiscale, omero };
+    learnedOpenSeadragons.add(os);
+    os.converter.learn(
+      "zarrChunk",
+      "context2d",
+      (tile: OpenSeadragon.Tile, chunk: ZarrChunk) => {
+        const source = tile.tiledImage?.source;
+        if (!(source instanceof OMEZarrTileSource)) {
+          throw new Error("zarrChunk does not belong to an OME-Zarr tile");
+        }
+        return source._renderChunk(chunk);
+      },
+      1,
+      2,
+    );
+    os.converter.learn(
+      "zarrChunk",
+      "zarrChunk",
+      (_tile: OpenSeadragon.Tile, chunk: ZarrChunk) => copyChunk(chunk),
+      1,
+      1,
+    );
   }
 
-  private static _getAxisIndices(multiscale: Multiscale): {
-    t?: number;
-    c?: number;
-    z?: number;
-    y: number;
-    x: number;
-  } {
-    let t: number | undefined = undefined;
-    let c: number | undefined = undefined;
-    let z: number | undefined = undefined;
-    let y: number | undefined = undefined;
-    let x: number | undefined = undefined;
-    for (let i = 0; i < multiscale.axes.length; i++) {
-      const axis = multiscale.axes[i]!;
-      switch (axis.name) {
-        case "t":
-          t = i;
-          break;
-        case "c":
-          c = i;
-          break;
-        case "z":
-          z = i;
-          break;
-        case "y":
-          y = i;
-          break;
+  /** Opens the image and its arrays and initializes the tile source from them. */
+  private async _open(url: string): Promise<void> {
+    const img = await NgffImage.load(openStore(url, this.zip));
+    const axes = img.getAxesNames();
+    if (!axes.every(isAxis) || !axes.includes("x") || !axes.includes("y")) {
+      throw new Error(`unsupported axes: ${axes.join(", ")}`);
+    }
+    const arrays = await Promise.all(
+      img.paths.map((_, i) => img.openArray(i) as Promise<ZarrArray>),
+    );
+    console.debug(`opened ${arrays.length} arrays for ${url}`);
+    this._image = { img, axes, arrays: arrays.reverse() };
+    this.maxLevel = arrays.length - 1;
+    await this._completeChannelWindows();
+    this.width = this._getSize(this.maxLevel, "x");
+    this.height = this._getSize(this.maxLevel, "y");
+    this.aspectRatio = this.width / this.height;
+    this.dimensions = new OpenSeadragon.Point(this.width, this.height);
+    this.ready = true;
+  }
+
+  /**
+   * Fills in missing channel window start/end values once from the smallest
+   * resolution level, so that all tiles are rendered with the same range.
+   */
+  private async _completeChannelWindows(): Promise<void> {
+    const channels = this._loaded.img.omero?.channels ?? [];
+    await Promise.all(
+      channels.map(async ({ window }, c) => {
+        if (window.start === undefined || window.end === undefined) {
+          const selection = this._getSelection(0, { c });
+          const plane = await zarr.get(this._getArray(0), selection);
+          const [min, max] = getMinMaxValues(plane);
+          window.start ??= min;
+          window.end ??= Math.max(max, window.start + 1);
+        }
+      }),
+    );
+  }
+
+  /** Loads the data of a tile as {@link dataType}. */
+  private async _downloadTile(
+    level: number,
+    x: number,
+    y: number,
+    signal: AbortSignal,
+  ) {
+    const array = this._getArray(level);
+    if (this.dataType === "zarrChunk") {
+      return zarr.get(array, this._getSelection(level, { x, y }), { signal });
+    }
+    const { data, width, height } = await this._loaded.img.renderArray({
+      arr: array,
+      slices: {
+        x: this._getTileRange(level, "x", x),
+        y: this._getTileRange(level, "y", y),
+        z: this.z,
+        t: this.t,
+      },
+      channels: this._getChannels(),
+      signal,
+    });
+    return toContext2D(data, width, height);
+  }
+
+  /** Renders a `"zarrChunk"` tile of this tile source to a 2D context. */
+  private _renderChunk(chunk: ZarrChunk): CanvasRenderingContext2D {
+    const height = chunk.shape[this._axis("y")]!;
+    const width = chunk.shape[this._axis("x")]!;
+    const channels = getActiveChannels(this._getChannels());
+    // the chunk's c axis holds either all channels or only channel `c`
+    const stride =
+      this.c === undefined ? (chunk.stride[this._axis("c")] ?? 0) : 0;
+    const planes = channels.map(({ index }) =>
+      getPlane(chunk, index * stride, height, width),
+    );
+    return toContext2D(renderPlanes(planes, channels), width, height);
+  }
+
+  /** Omero channels of the image; only channel {@link c} is active if set. */
+  private _getChannels() {
+    const channels = this._loaded.img.omero?.channels ?? [];
+    return this.c === undefined
+      ? channels
+      : channels.map((channel, i) => ({ ...channel, active: i === this.c }));
+  }
+
+  /**
+   * Full-rank zarrita selection of a tile at `level`, or of the whole plane if
+   * the tile coordinates are omitted. Fixed t/z/c axes are sliced to length 1,
+   * other axes are selected entirely.
+   */
+  private _getSelection(
+    level: number,
+    { x, y, c = this.c }: { x?: number; y?: number; c?: number } = {},
+  ): (zarr.Slice | null)[] {
+    const range = (start: number, stop = start + 1) => zarr.slice(start, stop);
+    return this._loaded.axes.map((axis) => {
+      switch (axis) {
         case "x":
-          x = i;
-          break;
+          return x === undefined
+            ? null
+            : range(...this._getTileRange(level, "x", x));
+        case "y":
+          return y === undefined
+            ? null
+            : range(...this._getTileRange(level, "y", y));
+        case "c":
+          return c === undefined ? null : range(c);
         default:
-          throw new Error(`unsupported axis: ${axis.name}`);
+          return range(this._getPlaneIndex(level, axis));
       }
+    });
+  }
+
+  /**
+   * Index of the t/z plane to show at `level`: the configured or omero default
+   * index, rescaled like ome-zarr.js does if the level has a different size
+   * along that axis, or the middle plane if unspecified.
+   */
+  private _getPlaneIndex(level: number, axis: "t" | "z"): number {
+    const rdefs = this._loaded.img.omero?.rdefs;
+    const index =
+      axis === "z" ? (this.z ?? rdefs?.defaultZ) : (this.t ?? rdefs?.defaultT);
+    const size = this._getSize(level, axis);
+    if (index === undefined) {
+      return Math.floor(size / 2);
     }
-    if (x === undefined || y === undefined) {
-      throw new Error("missing X or Y axis");
+    return Math.floor((index * size) / this._getSize(this.maxLevel, axis));
+  }
+
+  /** Pixel range `[start, stop)` covered by tile `index` along `axis` at `level`. */
+  private _getTileRange(
+    level: number,
+    axis: "x" | "y",
+    index: number,
+  ): [number, number] {
+    const tileSize =
+      axis === "x" ? this.getTileWidth(level) : this.getTileHeight(level);
+    const size = this._getSize(level, axis);
+    return [index * tileSize, Math.min((index + 1) * tileSize, size)];
+  }
+
+  /** Size of the array at `level` along `axis`. */
+  private _getSize(level: number, axis: Axis): number {
+    return this._getArray(level).shape[this._axis(axis)]!;
+  }
+
+  /** Array of the given level. */
+  private _getArray(level: number): ZarrArray {
+    const array = this._loaded.arrays[level];
+    if (array === undefined) {
+      throw new Error("level out of bounds");
     }
-    return { t, c, z, y, x };
+    return array;
+  }
+
+  /** Index of the named axis, or -1 if the image has no such axis. */
+  private _axis(name: Axis): number {
+    return this._loaded.axes.indexOf(name);
+  }
+
+  /** The loaded image state; throws if the tile source is not ready. */
+  private get _loaded() {
+    if (this._image === undefined) {
+      throw new Error("tile source not ready");
+    }
+    return this._image;
   }
 }
