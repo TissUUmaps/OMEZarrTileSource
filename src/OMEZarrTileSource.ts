@@ -17,13 +17,6 @@ import {
   openStore,
 } from "./utils/zarr";
 
-/** Constructor type of {@link OMEZarrTileSource}. */
-export type OMEZarrTileSourceClass = typeof OMEZarrTileSource;
-declare module "openseadragon" {
-  /** Set by {@link OMEZarrTileSource.enable}. */
-  let OMEZarrTileSource: OMEZarrTileSourceClass;
-}
-
 /** Options for {@link OMEZarrTileSource}. */
 export interface OMEZarrTileSourceOptions {
   /** Tile source type, required for inline configuration in OpenSeadragon. */
@@ -255,7 +248,7 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
    * `{ type: "ome-zarr" }` configuration, and learns the data types.
    */
   static enable(os: typeof OpenSeadragon = OpenSeadragon): void {
-    os.OMEZarrTileSource = OMEZarrTileSource;
+    Object.assign(os, { OMEZarrTileSource });
     OMEZarrTileSource.learnDataTypes(os);
   }
 
