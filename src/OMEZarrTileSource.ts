@@ -46,11 +46,6 @@ export interface OMEZarrTileSourceOptions {
   dataType?: "context2d" | "zarrChunk";
 }
 
-/** Per-tile state stored on OpenSeadragon's ImageJob. */
-type UserData = {
-  abortController?: AbortController;
-};
-
 /** OpenSeadragon instances whose converter already knows the data types. */
 const learnedOpenSeadragons = new WeakSet<typeof OpenSeadragon>();
 
@@ -215,7 +210,9 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
    */
   downloadTileStart(context: OpenSeadragon.ImageJob): void {
     const abortController = new AbortController();
-    (context.userData as UserData).abortController = abortController;
+    (
+      context.userData as { abortController?: AbortController }
+    ).abortController = abortController;
     const params = new URLSearchParams(context.src);
     const level = Number(params.get("level"));
     const x = Number(params.get("x"));
@@ -240,7 +237,9 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
 
   /** Aborts a tile download started by {@link downloadTileStart}. */
   downloadTileAbort(context: OpenSeadragon.ImageJob): void {
-    (context.userData as UserData).abortController?.abort();
+    (
+      context.userData as { abortController?: AbortController }
+    ).abortController?.abort();
   }
 
   /**
