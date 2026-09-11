@@ -1,9 +1,8 @@
-import { ZipFileStore } from "@zarrita/storage";
+import ZipFileStore from "@zarrita/storage/zip";
 import {
   type Channel,
   NgffImage,
   type Omero,
-  getMinMaxValues,
   getSlices,
   renderChunks,
 } from "ome-zarr.js";
@@ -12,7 +11,7 @@ import * as zarr from "zarrita";
 
 export interface OMEZarrTileSourceOptions {
   type?: "ome-zarr";
-  url: string; // TileSource.url
+  url: string;
   zip?: boolean;
   c?: number;
   z?: number;
@@ -40,20 +39,34 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
   height: number = 10;
   private _image?: NgffImage;
   private _arrays?: zarr.Array<zarr.NumberDataType | zarr.BigintDataType>[];
+  private readonly _readyPromise = new Promise<this>((resolve, reject) => {
+    this.addOnceHandler("ready", () => resolve(this));
+    this.addOnceHandler("open-failed", (e) => reject(new Error(e.message)));
+  });
 
   static {
     OMEZarrTileSource._learnConverters(OpenSeadragon);
   }
 
-  constructor(url: string);
-  constructor(options: OMEZarrTileSourceOptions);
-  constructor(config: string | OMEZarrTileSourceOptions) {
+  static open(
+    config: string | OMEZarrTileSourceOptions,
+    image?: NgffImage,
+  ): Promise<OMEZarrTileSource> {
+    return new OMEZarrTileSource(
+      config as OMEZarrTileSourceOptions,
+      image,
+    ).whenReady();
+  }
+
+  constructor(url: string, image?: NgffImage);
+  constructor(options: OMEZarrTileSourceOptions, image?: NgffImage);
+  constructor(config: string | OMEZarrTileSourceOptions, image?: NgffImage) {
     if (typeof config === "string") {
-      super(config); // invokes getImageInfo
+      super(config); // schedules getImageInfo (async, after this constructor)
       this.url = config;
       this.dataType = "context2d";
     } else {
-      super(config.url); // invokes getImageInfo
+      super(config.url); // schedules getImageInfo (async, after this constructor)
       this.url = config.url;
       this.zip = config.zip;
       this.c = config.c;
@@ -62,6 +75,26 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
       this.dataType = config.dataType ?? "context2d";
       this.autoBoost = config.autoBoost;
     }
+    this._image = image;
+    this._readyPromise.catch(() => {}); // avoid unhandled rejections
+  }
+
+  get image(): NgffImage {
+    if (this._image === undefined) {
+      throw new Error("tile source not ready");
+    }
+    return this._image;
+  }
+
+  get arrays(): zarr.Array<zarr.NumberDataType | zarr.BigintDataType>[] {
+    if (this._arrays === undefined) {
+      throw new Error("tile source not ready");
+    }
+    return this._arrays;
+  }
+
+  whenReady(): Promise<this> {
+    return this._readyPromise;
   }
 
   supports(data: string | object | object[] | Document): boolean {
@@ -108,10 +141,13 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
   }
 
   getImageInfo(url: string): void {
-    NgffImage.load(
-      this.zip || (this.zip === undefined && url.endsWith(".ozx"))
-        ? ZipFileStore.fromUrl(url)
-        : url,
+    Promise.resolve(
+      this._image ??
+        NgffImage.load(
+          this.zip || (this.zip === undefined && url.endsWith(".ozx"))
+            ? ZipFileStore.fromUrl(url)
+            : url,
+        ),
     )
       .then(async (image) => {
         const axisNames = image.getAxesNames();
@@ -127,30 +163,47 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
           throw new Error("X axis must come after Y axis");
         }
         const arrays = await Promise.all(
-          image.paths.map((path) => image.openArray(path)),
+          image.paths.map(
+            (path) =>
+              image.openArray(path) as Promise<
+                zarr.Array<zarr.NumberDataType | zarr.BigintDataType>
+              >,
+          ),
         );
-        const channelAxis = axisNames.indexOf("c");
-        const numChannels =
-          channelAxis >= 0 ? arrays[0]!.shape[channelAxis]! : 1;
-        if (this.z !== undefined) {
-          image.setZIndex(this.z);
+        const tAxis = axisNames.indexOf("t");
+        const sizeT = tAxis >= 0 ? arrays[0]!.shape[tAxis]! : 1;
+        if (this.t !== undefined && (this.t < 0 || this.t >= sizeT)) {
+          throw new Error(
+            `Invalid t index ${this.t} for image with ${sizeT} timepoints`,
+          );
         }
-        if (this.t !== undefined) {
-          image.setTIndex(this.t);
+        const zAxis = axisNames.indexOf("z");
+        const sizeZ = zAxis >= 0 ? arrays[0]!.shape[zAxis]! : 1;
+        if (this.z !== undefined && (this.z < 0 || this.z >= sizeZ)) {
+          throw new Error(
+            `Invalid z index ${this.z} for image with ${sizeZ} z-slices`,
+          );
+        }
+        const cAxis = axisNames.indexOf("c");
+        const sizeC = cAxis >= 0 ? arrays[0]!.shape[cAxis]! : 1;
+        if (this.c !== undefined && (this.c < 0 || this.c >= sizeC)) {
+          throw new Error(
+            `Invalid c index ${this.c} for image with ${sizeC} channels`,
+          );
         }
         if (
           this.dataType !== "context2d" &&
           this.c === undefined &&
-          numChannels > 1
+          sizeC > 1
         ) {
           throw new Error(
-            `Multi-channel image with ${numChannels} channels; specify c or render as "context2d"`,
+            `Multi-channel image with ${sizeC} channels; specify c or render as "context2d"`,
           );
         }
         const omero = image.checkChannelIndex(this.c ?? 0);
-        if (omero.channels.length !== numChannels) {
+        if (omero.channels.length !== sizeC) {
           throw new Error(
-            `OME-Zarr metadata lists ${omero.channels.length} channels, but the image has ${numChannels}`,
+            `OME-Zarr metadata lists ${omero.channels.length} channels, but the image has ${sizeC}`,
           );
         }
         if (this._getActiveChannelIndices(omero).length === 0) {
@@ -269,16 +322,16 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
         {
           x: [x * tileWidth, (x + 1) * tileWidth], // clamped by zarrita
           y: [y * tileHeight, (y + 1) * tileHeight], // clamped by zarrita
-          z: omero.rdefs.defaultZ,
-          t: omero.rdefs.defaultT,
+          z: this.z ?? omero.rdefs?.defaultZ, // undefined = middle plane
+          t: this.t ?? omero.rdefs?.defaultT, // undefined = middle plane
         },
       ) as (number | zarr.Slice | null)[][];
       Promise.all(
         selections.map((selection) =>
           zarr.get(array, selection, { signal: abortController.signal }),
         ),
-      ).then(
-        (chunks) => {
+      )
+        .then((chunks) => {
           // no abort check needed: finish() is a no-op after abort()
           if (this.dataType === "context2d") {
             const ctx = OMEZarrTileSource._render(
@@ -295,18 +348,17 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
             };
             context.finish(data, null, "ome-zarr");
           }
-        },
-        (error) => {
+        })
+        .catch((error) => {
           const aborted = abortController.signal.aborted;
           abortController.abort(); // cancel the remaining channel requests
           if (!aborted) {
             context.fail(
-              `failed to render tile for level=${level}, x=${x}, y=${y}: ${error}`,
+              `failed to render tile for level=${level}, x=${x}, y=${y}: ${String(error)}`,
               null,
             );
           }
-        },
-      );
+        });
     } catch (error) {
       context.fail(
         `failed to download tile for level=${level}, x=${x}, y=${y}: ${String(error)}`,
@@ -377,7 +429,7 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
         const [vmin, vmax] =
           channel.window.start !== undefined && channel.window.end !== undefined
             ? [channel.window.start, channel.window.end]
-            : getMinMaxValues(chunks[i]);
+            : OMEZarrTileSource._getDataTypeRange(chunks[i]!);
         return vmin < vmax ? [vmin, vmax] : [vmin, vmin + 1];
       },
     );
@@ -401,5 +453,36 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
     const data = new ImageData(rgba, width, height);
     ctx.putImageData(data, 0, 0);
     return ctx;
+  }
+
+  private static _getDataTypeRange(
+    chunk: zarr.Chunk<zarr.NumberDataType | zarr.BigintDataType>,
+  ): [number, number] {
+    const { data } = chunk;
+    if (data instanceof Int8Array) {
+      return [-128, 127];
+    }
+    if (data instanceof Uint8Array) {
+      return [0, 255];
+    }
+    if (data instanceof Int16Array) {
+      return [-32768, 32767];
+    }
+    if (data instanceof Uint16Array) {
+      return [0, 65535];
+    }
+    if (data instanceof Int32Array) {
+      return [-2147483648, 2147483647];
+    }
+    if (data instanceof Uint32Array) {
+      return [0, 4294967295];
+    }
+    if (data instanceof BigInt64Array) {
+      return [-(2 ** 63), 2 ** 63 - 1]; // not exactly representable as number
+    }
+    if (data instanceof BigUint64Array) {
+      return [0, 2 ** 64 - 1]; // not exactly representable as number
+    }
+    return [0, 1]; // floating point (and bool)
   }
 }

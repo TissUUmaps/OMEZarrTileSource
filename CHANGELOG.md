@@ -11,7 +11,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+### Fixed
+
 ### Removed
+
+## [0.4.0] - 2026-09-12
+
+### Added
+
+- Optional `image` argument of the constructor and `OMEZarrTileSource.open` to reuse a loaded `NgffImage` (and its opened arrays) across tile sources for the same URL, e.g. one tile source per channel
+- `whenReady()` method returning a promise that resolves with the tile source once the OME-Zarr metadata has been loaded (and rejects on failure), and static `OMEZarrTileSource.open` shortcut that constructs a tile source and awaits it
+- `image` (ome-zarr.js `NgffImage`) and `arrays` (zarrita arrays, one per resolution level) getters for accessing OME-Zarr metadata, e.g. before adding the tile source to a viewer
+
+### Changed
+
+- Channels without `window.start`/`window.end` in the omero metadata are now rendered using the data type range (integer types) or `[0, 1]` (floating point types) instead of the per-tile minimum/maximum
+- The OME-Zarr metadata (`image`) is treated as read-only: the `z` and `t` options are applied when requesting tiles instead of modifying the omero `rdefs`
+- The `c`, `z` and `t` options are validated against the image shape when loading the image; invalid indices fail with `open-failed` instead of failing individual tiles
+
+### Fixed
+
+- Errors thrown while rendering a tile (e.g. failing to get a 2D canvas context) now fail the tile download instead of leaving the tile pending with an unhandled promise rejection
+- Images whose omero metadata lacks `rdefs` can now be rendered (the middle z-slice/timepoint is used unless `z`/`t` are specified)
 
 ## [0.3.0] - 2026-09-11
 
@@ -92,7 +113,8 @@ Complete package.json
 
 Initial release
 
-[unreleased]: https://github.com/TissUUmaps/OMEZarrTileSource/compare/v0.3.0...HEAD
+[unreleased]: https://github.com/TissUUmaps/OMEZarrTileSource/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/TissUUmaps/OMEZarrTileSource/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/TissUUmaps/OMEZarrTileSource/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/TissUUmaps/OMEZarrTileSource/compare/v0.1.2...v0.2.0
 [0.1.2]: https://github.com/TissUUmaps/OMEZarrTileSource/compare/v0.1.1...v0.1.2

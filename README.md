@@ -40,8 +40,8 @@ const tileSource2 = {
     url: url,
     // zip: undefined,  // undefined = OME-Zarr ZIP auto-detection based on .ozx suffix
     // c: undefined,  // undefined = composite of all active channels (requires dataType "context2d")
-    // z: undefined,  // undefined = omero metadata default
-    // t: undefined,  // undefined = omero metadata default
+    // z: undefined,  // undefined = omero rdefs default (middle z-slice if missing)
+    // t: undefined,  // undefined = omero rdefs default (middle timepoint if missing)
     // dataType: undefined,  // "context2d" (default, rendered tiles) or "ome-zarr" (raw single-channel chunks)
     // autoBoost: undefined  // boost brightness of dark tiles (default false)
 };
@@ -54,8 +54,8 @@ const tileSource4 = new OMEZarrTileSource({
     url: url,
     // zip: undefined,  // undefined = OME-Zarr ZIP auto-detection based on .ozx suffix
     // c: undefined,  // undefined = composite of all active channels (requires dataType "context2d")
-    // z: undefined,  // undefined = omero metadata default
-    // t: undefined,  // undefined = omero metadata default
+    // z: undefined,  // undefined = omero rdefs default (middle z-slice if missing)
+    // t: undefined,  // undefined = omero rdefs default (middle timepoint if missing)
     // dataType: undefined,  // "context2d" (default, rendered tiles) or "ome-zarr" (raw single-channel chunks)
     // autoBoost: undefined  // boost brightness of dark tiles (default false)
 });
@@ -71,6 +71,48 @@ const viewer = OpenSeadragon(
 );
 ```
 
+### Accessing OME-Zarr metadata
+
+Directly instantiated tile sources start loading the OME-Zarr metadata
+immediately. Await `whenReady()` (or use the `OMEZarrTileSource.open` shortcut)
+to access the `NgffImage` instance (ome-zarr.js) and the opened zarrita arrays
+(one per resolution level) before adding the tile source to a viewer:
+
+```javascript
+const tileSource = await OMEZarrTileSource.open({ url: url, c: 0 });
+// equivalent: await new OMEZarrTileSource({ url: url, c: 0 }).whenReady();
+
+console.log(tileSource.image.getAxesNames()); // e.g. ["t", "z", "c", "y", "x"]
+console.log(tileSource.image.omero?.channels); // omero channel metadata
+console.log(tileSource.arrays[0].shape); // full-resolution array shape
+
+viewer.addTiledImage({ tileSource: tileSource }); // no second metadata request
+```
+
+The metadata is loaded once per tile source instance: OpenSeadragon reuses a
+tile source instance passed to it as-is (waiting for it to become ready if
+necessary), whereas a URL or an inline configuration object makes OpenSeadragon
+create (and load) a new instance. `whenReady()` rejects (and `image`/`arrays`
+throw) if loading fails.
+
+### Sharing OME-Zarr metadata between tile sources
+
+A loaded `NgffImage` can be reused by other directly instantiated tile sources
+for the same URL (e.g. one tile source per channel) by passing it as the second
+constructor argument (also supported by `OMEZarrTileSource.open`). This skips
+loading the OME-Zarr metadata (the `zip` option is ignored) and reuses the
+opened zarrita arrays, which ome-zarr.js caches on the `NgffImage` instance.
+The tile source never modifies the `NgffImage`, so sharing is safe:
+
+```javascript
+const tileSource1 = await OMEZarrTileSource.open({ url: url, c: 0 });
+const tileSource2 = new OMEZarrTileSource(
+  { url: url, c: 1 },
+  tileSource1.image,
+);
+// or, without a first tile source: NgffImage.load(url) from ome-zarr.js
+```
+
 ## Data pipeline
 
 By default (`dataType: "context2d"`), tiles are rendered by the tile source and
@@ -78,6 +120,11 @@ passed to OpenSeadragon as 2D canvas contexts, using the rendering settings
 (color, color LUT/map, contrast limits, inversion) from the omero metadata. For
 multi-channel images without `c`, all active channels are rendered into a
 composite image.
+
+Contrast limits are taken from the omero channel windows (`window.start`,
+`window.end`). Channels without them are rendered using the data type range
+for integer types (e.g. `[0, 65535]` for `uint16`) and `[0, 1]` for floating
+point types.
 
 With `dataType: "ome-zarr"`, tiles are instead downloaded as raw single-channel
 zarrita chunks and passed to OpenSeadragon with the data type `ome-zarr` (see

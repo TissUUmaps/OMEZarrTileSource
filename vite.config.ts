@@ -11,15 +11,19 @@ export default defineConfig(({ mode }) => {
           name: "OMEZarrTileSource",
           fileName: "omezarr-tilesource",
         },
-        rollupOptions: {
+        rolldownOptions: {
           external: ["openseadragon"],
           output: {
             globals: {
               openseadragon: "OpenSeadragon",
             },
           },
+          checks: {
+            pluginTimings: false,
+          },
         },
         chunkSizeWarningLimit: 2048,
+        copyPublicDir: false,
       },
       plugins: [nodePolyfills(), dts({ bundleTypes: true })],
     };
