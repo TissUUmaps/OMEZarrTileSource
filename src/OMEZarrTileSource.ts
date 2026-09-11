@@ -1,7 +1,7 @@
 import { ZipFileStore } from "@zarrita/storage";
 import { NgffImage } from "ome-zarr.js";
 import OpenSeadragon from "openseadragon";
-import * as zarr from "zarrita";
+import type * as zarr from "zarrita";
 
 export type OMEZarrTileSourceClass = typeof OMEZarrTileSource;
 declare module "openseadragon" {
@@ -96,7 +96,7 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
     const store =
       this.zip || (this.zip === undefined && url.endsWith(".ozx"))
         ? ZipFileStore.fromUrl(url)
-        : new zarr.FetchStore(url);
+        : url;
     NgffImage.load(store)
       .then(async (image) => {
         console.debug(`loaded image for ${url}`);
