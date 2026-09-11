@@ -71,6 +71,30 @@ const viewer = OpenSeadragon(
 );
 ```
 
+### Accessing OME-Zarr metadata
+
+Directly instantiated tile sources start loading the OME-Zarr metadata
+immediately. Await `whenReady()` (or use the `OMEZarrTileSource.open` shortcut)
+to access the `NgffImage` instance (ome-zarr.js) and the opened zarrita arrays
+(one per resolution level) before adding the tile source to a viewer:
+
+```javascript
+const tileSource = await OMEZarrTileSource.open({ url: url, c: 0 });
+// equivalent: await new OMEZarrTileSource({ url: url, c: 0 }).whenReady();
+
+console.log(tileSource.image.getAxesNames()); // e.g. ["t", "z", "c", "y", "x"]
+console.log(tileSource.image.omero?.channels); // omero channel metadata
+console.log(tileSource.arrays[0].shape); // full-resolution array shape
+
+viewer.addTiledImage({ tileSource: tileSource }); // no second metadata request
+```
+
+The metadata is loaded once per tile source instance: OpenSeadragon reuses a
+tile source instance passed to it as-is (waiting for it to become ready if
+necessary), whereas a URL or an inline configuration object makes OpenSeadragon
+create (and load) a new instance. `whenReady()` rejects (and `image`/`arrays`
+throw) if loading fails.
+
 ## Data pipeline
 
 By default (`dataType: "context2d"`), tiles are rendered by the tile source and

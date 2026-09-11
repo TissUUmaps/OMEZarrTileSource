@@ -9,7 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `whenReady()` method returning a promise that resolves with the tile source once the OME-Zarr metadata has been loaded (and rejects on failure), and static `OMEZarrTileSource.open` shortcut that constructs a tile source and awaits it
+- `image` (ome-zarr.js `NgffImage`) and `arrays` (zarrita arrays, one per resolution level) getters for accessing OME-Zarr metadata, e.g. before adding the tile source to a viewer
+
 ### Changed
+
+### Fixed
+
+- Errors thrown while rendering a tile (e.g. failing to get a 2D canvas context) now fail the tile download instead of leaving the tile pending with an unhandled promise rejection
 
 ### Removed
 

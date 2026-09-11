@@ -40,9 +40,21 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
   height: number = 10;
   private _image?: NgffImage;
   private _arrays?: zarr.Array<zarr.NumberDataType | zarr.BigintDataType>[];
+  private readonly _readyPromise = new Promise<this>((resolve, reject) => {
+    this.addOnceHandler("ready", () => resolve(this));
+    this.addOnceHandler("open-failed", (e) => reject(new Error(e.message)));
+  });
 
   static {
     OMEZarrTileSource._learnConverters(OpenSeadragon);
+  }
+
+  static open(
+    config: string | OMEZarrTileSourceOptions,
+  ): Promise<OMEZarrTileSource> {
+    return new OMEZarrTileSource(
+      config as OMEZarrTileSourceOptions,
+    ).whenReady();
   }
 
   constructor(url: string);
@@ -62,6 +74,25 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
       this.dataType = config.dataType ?? "context2d";
       this.autoBoost = config.autoBoost;
     }
+    this._readyPromise.catch(() => {}); // avoid unhandled rejections
+  }
+
+  get image(): NgffImage {
+    if (this._image === undefined) {
+      throw new Error("tile source not ready");
+    }
+    return this._image;
+  }
+
+  get arrays(): zarr.Array<zarr.NumberDataType | zarr.BigintDataType>[] {
+    if (this._arrays === undefined) {
+      throw new Error("tile source not ready");
+    }
+    return this._arrays;
+  }
+
+  whenReady(): Promise<this> {
+    return this._readyPromise;
   }
 
   supports(data: string | object | object[] | Document): boolean {
@@ -277,8 +308,8 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
         selections.map((selection) =>
           zarr.get(array, selection, { signal: abortController.signal }),
         ),
-      ).then(
-        (chunks) => {
+      )
+        .then((chunks) => {
           // no abort check needed: finish() is a no-op after abort()
           if (this.dataType === "context2d") {
             const ctx = OMEZarrTileSource._render(
@@ -295,18 +326,17 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
             };
             context.finish(data, null, "ome-zarr");
           }
-        },
-        (error) => {
+        })
+        .catch((error) => {
           const aborted = abortController.signal.aborted;
           abortController.abort(); // cancel the remaining channel requests
           if (!aborted) {
             context.fail(
-              `failed to render tile for level=${level}, x=${x}, y=${y}: ${error}`,
+              `failed to render tile for level=${level}, x=${x}, y=${y}: ${String(error)}`,
               null,
             );
           }
-        },
-      );
+        });
     } catch (error) {
       context.fail(
         `failed to download tile for level=${level}, x=${x}, y=${y}: ${String(error)}`,
