@@ -92,14 +92,12 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
   }
 
   getImageInfo(url: string): void {
-    console.debug(`getting image info for ${url}`);
     const store =
       this.zip || (this.zip === undefined && url.endsWith(".ozx"))
         ? ZipFileStore.fromUrl(url)
         : url;
     NgffImage.load(store)
       .then(async (image) => {
-        console.debug(`loaded image for ${url}`);
         const axisNames = image.getAxesNames();
         for (const axisName of axisNames) {
           if (!["t", "c", "z", "y", "x"].includes(axisName)) {
@@ -112,7 +110,6 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
         const arrays = await Promise.all(
           image.paths.map((path) => image.openArray(path)),
         );
-        console.debug(`opened ${arrays.length} arrays for ${url}`);
         if (this.c !== undefined) {
           image.checkChannelIndex(this.c).channels.forEach((_, i) => {
             image.setChannelActive(i, i === this.c);
@@ -131,7 +128,6 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
         this.width = width;
         this.height = height;
         this.maxLevel = arrays.length - 1;
-        console.debug(`ready for ${url}`);
         this.raiseEvent("ready", { tileSource: this });
       })
       .catch((reason) => {
@@ -140,9 +136,10 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
         this.width = 10;
         this.height = 10;
         this.maxLevel = 0;
-        const message = `failed to get image info for ${url}: ${reason}`;
-        console.error(message);
-        this.raiseEvent("open-failed", { message, source: url });
+        this.raiseEvent("open-failed", {
+          message: `failed to get image info for ${url}: ${reason}`,
+          source: url,
+        });
       });
   }
 
@@ -219,9 +216,6 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
       if (this._image === undefined || this._arrays === undefined) {
         throw new Error("tile source not ready");
       }
-      console.debug(
-        `downloading tile for level=${level}, x=${x}, y=${y} from dataset ${this.maxLevel - level}`,
-      );
       const tileWidth = this.getTileWidth(level);
       const tileHeight = this.getTileHeight(level);
       this._image
@@ -235,7 +229,6 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
         })
         .then(({ data, width, height }) => {
           abortController.signal.throwIfAborted();
-          console.debug(`rendered tile for level=${level}, x=${x}, y=${y}`);
           const canvas = document.createElement("canvas");
           canvas.width = width;
           canvas.height = height;
@@ -255,20 +248,18 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
           context.finish(ctx, null, "context2d");
         })
         .catch((reason) => {
-          if (abortController.signal.aborted) {
-            console.debug(
-              `aborted tile rendering for level=${level}, x=${x}, y=${y}`,
+          if (!abortController.signal.aborted) {
+            context.fail(
+              `failed to render tile for level=${level}, x=${x}, y=${y}: ${reason}`,
+              null,
             );
-          } else {
-            const message = `failed to render tile for level=${level}, x=${x}, y=${y}: ${reason}`;
-            console.error(message);
-            context.fail(message, null);
           }
         });
     } catch (error) {
-      const message = `failed to download tile for level=${level}, x=${x}, y=${y}: ${String(error)}`;
-      console.error(message);
-      context.fail(message, null);
+      context.fail(
+        `failed to download tile for level=${level}, x=${x}, y=${y}: ${String(error)}`,
+        null,
+      );
     }
   }
 
