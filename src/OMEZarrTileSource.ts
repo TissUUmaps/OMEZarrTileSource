@@ -1,4 +1,4 @@
-import { ZipFileStore } from "@zarrita/storage";
+import ZipFileStore from "@zarrita/storage/zip";
 import {
   type Channel,
   NgffImage,
