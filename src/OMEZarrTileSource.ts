@@ -22,8 +22,6 @@ export interface OMEZarrTileSourceOptions {
 }
 
 export class OMEZarrTileSource extends OpenSeadragon.TileSource {
-  static readonly DUMMY_XHR = new XMLHttpRequest();
-
   // properties inherited from/required by OpenSeadragon.TileSource
   readonly url: string;
   width: number = 10;
@@ -266,7 +264,7 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
             0,
             0,
           );
-          context.finish(ctx, OMEZarrTileSource.DUMMY_XHR, "context2d");
+          context.finish(ctx, null, "context2d");
         })
         .catch((reason) => {
           if (abortController.signal.aborted) {
@@ -276,13 +274,13 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
           } else {
             const message = `failed to render tile for level=${level}, x=${x}, y=${y}: ${reason}`;
             console.error(message);
-            context.fail(message, OMEZarrTileSource.DUMMY_XHR);
+            context.fail(message, null);
           }
         });
     } catch (error) {
       const message = `failed to download tile for level=${level}, x=${x}, y=${y}: ${String(error)}`;
       console.error(message);
-      context.fail(message, OMEZarrTileSource.DUMMY_XHR);
+      context.fail(message, null);
     }
   }
 
