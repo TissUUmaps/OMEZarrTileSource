@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Optional `image` argument of the constructor and `OMEZarrTileSource.open` to reuse a loaded `NgffImage` (and its opened arrays) across tile sources for the same URL, e.g. one tile source per channel
 - `whenReady()` method returning a promise that resolves with the tile source once the OME-Zarr metadata has been loaded (and rejects on failure), and static `OMEZarrTileSource.open` shortcut that constructs a tile source and awaits it
 - `image` (ome-zarr.js `NgffImage`) and `arrays` (zarrita arrays, one per resolution level) getters for accessing OME-Zarr metadata, e.g. before adding the tile source to a viewer
 

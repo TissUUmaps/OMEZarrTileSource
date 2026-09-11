@@ -11,7 +11,7 @@ import * as zarr from "zarrita";
 
 export interface OMEZarrTileSourceOptions {
   type?: "ome-zarr";
-  url: string; // TileSource.url
+  url: string;
   zip?: boolean;
   c?: number;
   z?: number;
@@ -50,21 +50,23 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
 
   static open(
     config: string | OMEZarrTileSourceOptions,
+    image?: NgffImage,
   ): Promise<OMEZarrTileSource> {
     return new OMEZarrTileSource(
       config as OMEZarrTileSourceOptions,
+      image,
     ).whenReady();
   }
 
-  constructor(url: string);
-  constructor(options: OMEZarrTileSourceOptions);
-  constructor(config: string | OMEZarrTileSourceOptions) {
+  constructor(url: string, image?: NgffImage);
+  constructor(options: OMEZarrTileSourceOptions, image?: NgffImage);
+  constructor(config: string | OMEZarrTileSourceOptions, image?: NgffImage) {
     if (typeof config === "string") {
-      super(config); // invokes getImageInfo
+      super(config); // schedules getImageInfo (async, after this constructor)
       this.url = config;
       this.dataType = "context2d";
     } else {
-      super(config.url); // invokes getImageInfo
+      super(config.url); // schedules getImageInfo (async, after this constructor)
       this.url = config.url;
       this.zip = config.zip;
       this.c = config.c;
@@ -73,6 +75,7 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
       this.dataType = config.dataType ?? "context2d";
       this.autoBoost = config.autoBoost;
     }
+    this._image = image;
     this._readyPromise.catch(() => {}); // avoid unhandled rejections
   }
 
@@ -138,10 +141,13 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
   }
 
   getImageInfo(url: string): void {
-    NgffImage.load(
-      this.zip || (this.zip === undefined && url.endsWith(".ozx"))
-        ? ZipFileStore.fromUrl(url)
-        : url,
+    Promise.resolve(
+      this._image ??
+        NgffImage.load(
+          this.zip || (this.zip === undefined && url.endsWith(".ozx"))
+            ? ZipFileStore.fromUrl(url)
+            : url,
+        ),
     )
       .then(async (image) => {
         const axisNames = image.getAxesNames();

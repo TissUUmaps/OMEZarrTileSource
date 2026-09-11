@@ -95,6 +95,24 @@ necessary), whereas a URL or an inline configuration object makes OpenSeadragon
 create (and load) a new instance. `whenReady()` rejects (and `image`/`arrays`
 throw) if loading fails.
 
+### Sharing OME-Zarr metadata between tile sources
+
+A loaded `NgffImage` can be reused by other directly instantiated tile sources
+for the same URL (e.g. one tile source per channel) by passing it as the second
+constructor argument (also supported by `OMEZarrTileSource.open`). This skips
+loading the OME-Zarr metadata (the `zip` option is ignored) and reuses the
+opened zarrita arrays, which ome-zarr.js caches on the `NgffImage` instance.
+The tile source never modifies the `NgffImage`, so sharing is safe:
+
+```javascript
+const tileSource1 = await OMEZarrTileSource.open({ url: url, c: 0 });
+const tileSource2 = new OMEZarrTileSource(
+  { url: url, c: 1 },
+  tileSource1.image,
+);
+// or, without a first tile source: NgffImage.load(url) from ome-zarr.js
+```
+
 ## Data pipeline
 
 By default (`dataType: "context2d"`), tiles are rendered by the tile source and
