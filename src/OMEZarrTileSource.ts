@@ -1,5 +1,5 @@
 import { ZipFileStore } from "@zarrita/storage";
-import { type Axis, type Channel, NgffImage } from "ome-zarr.js";
+import { type Channel, NgffImage } from "ome-zarr.js";
 import OpenSeadragon from "openseadragon";
 import * as zarr from "zarrita";
 
@@ -22,27 +22,16 @@ export interface OMEZarrTileSourceOptions {
 }
 
 export class OMEZarrTileSource extends OpenSeadragon.TileSource {
-  // properties inherited from/required by OpenSeadragon.TileSource
-  readonly url: string;
-  width: number = 10;
-  height: number = 10;
-  aspectRatio: number = 1;
-  dimensions: OpenSeadragon.Point = new OpenSeadragon.Point(10, 10);
-  maxLevel: number = 0;
-  ready: boolean = false;
+  declare readonly url: string;
 
   readonly zip?: boolean;
   readonly t?: number;
   readonly c?: number;
   readonly z?: number;
+
+  width: number = 10;
+  height: number = 10;
   private _image?: NgffImage;
-  private _axisIndices?: {
-    t?: number;
-    c?: number;
-    z?: number;
-    y: number;
-    x: number;
-  };
   private _arrays?: zarr.Array<zarr.DataType>[];
 
   constructor(url: string);
@@ -111,35 +100,35 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
     NgffImage.load(store)
       .then(async (image) => {
         console.debug(`loaded image for ${url}`);
-        const axisIndices = OMEZarrTileSource._getAxisIndices(image.axes);
+        const axisNames = image.getAxesNames();
+        for (const axisName of axisNames) {
+          if (!["t", "c", "z", "y", "x"].includes(axisName)) {
+            throw new Error(`unsupported axis: ${axisName}`);
+          }
+        }
+        if (!axisNames.includes("x") || !axisNames.includes("y")) {
+          throw new Error("missing X or Y axis");
+        }
         const arrays = await Promise.all(
           image.paths.map((path) => image.openArray(path)),
         );
         console.debug(`opened ${arrays.length} arrays for ${url}`);
-        const maxWidth = arrays[0]!.shape[axisIndices.x]!;
-        const maxHeight = arrays[0]!.shape[axisIndices.y]!;
+        const width = arrays[0]!.shape[axisNames.indexOf("x")]!;
+        const height = arrays[0]!.shape[axisNames.indexOf("y")]!;
         this._image = image;
-        this._axisIndices = axisIndices;
         this._arrays = arrays;
-        this.width = maxWidth;
-        this.height = maxHeight;
-        this.aspectRatio = maxWidth / maxHeight;
-        this.dimensions = new OpenSeadragon.Point(maxWidth, maxHeight);
+        this.width = width;
+        this.height = height;
         this.maxLevel = arrays.length - 1;
-        this.ready = true;
         console.debug(`ready for ${url}`);
         this.raiseEvent("ready", { tileSource: this });
       })
       .catch((reason) => {
         this._image = undefined;
-        this._axisIndices = undefined;
         this._arrays = undefined;
         this.width = 10;
         this.height = 10;
-        this.aspectRatio = 1;
-        this.dimensions = new OpenSeadragon.Point(10, 10);
         this.maxLevel = 0;
-        this.ready = false;
         const message = `failed to get image info for ${url}: ${reason}`;
         console.error(message);
         this.raiseEvent("open-failed", { message, source: url });
@@ -147,38 +136,39 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
   }
 
   getTileWidth(level: number): number {
-    if (this._axisIndices === undefined || this._arrays === undefined) {
+    if (this._image === undefined || this._arrays === undefined) {
       throw new Error("tile source not ready");
     }
     if (level < 0 || level > this.maxLevel) {
       throw new Error("level out of bounds");
     }
-    const array = this._arrays[this.maxLevel - level]!;
-    return array.chunks[this._axisIndices.x]!;
+    const levelArray = this._arrays[this.maxLevel - level]!;
+    return levelArray.chunks[this._image.getAxesNames().indexOf("x")]!;
   }
 
   getTileHeight(level: number): number {
-    if (this._axisIndices === undefined || this._arrays === undefined) {
+    if (this._image === undefined || this._arrays === undefined) {
       throw new Error("tile source not ready");
     }
     if (level < 0 || level > this.maxLevel) {
       throw new Error("level out of bounds");
     }
-    const array = this._arrays[this.maxLevel - level]!;
-    return array.chunks[this._axisIndices.y]!;
+    const levelArray = this._arrays[this.maxLevel - level]!;
+    return levelArray.chunks[this._image.getAxesNames().indexOf("y")]!;
   }
 
   getLevelScale(level: number): number {
-    if (this._axisIndices === undefined || this._arrays === undefined) {
+    if (this._image === undefined || this._arrays === undefined) {
       throw new Error("tile source not ready");
     }
     if (level < 0 || level > this.maxLevel) {
       throw new Error("level out of bounds");
     }
-    const array = this._arrays[this.maxLevel - level]!;
-    const arrayWidth = array.shape[this._axisIndices.x]!;
-    const maxWidth = this._arrays[0]!.shape[this._axisIndices.x]!;
-    return arrayWidth / maxWidth;
+    const xAxisIndex = this._image.getAxesNames().indexOf("x");
+    const levelArray = this._arrays[this.maxLevel - level]!;
+    const levelWidth = levelArray.shape[xAxisIndex]!;
+    const width = this._arrays[0]!.shape[xAxisIndex]!;
+    return levelWidth / width;
   }
 
   getTileUrl(level: number, x: number, y: number): string {
@@ -215,11 +205,7 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
     const x = +urlSearchParams.get("x")!;
     const y = +urlSearchParams.get("y")!;
     try {
-      if (
-        this._image === undefined ||
-        this._axisIndices === undefined ||
-        this._arrays === undefined
-      ) {
+      if (this._image === undefined || this._arrays === undefined) {
         throw new Error("tile source not ready");
       }
       console.debug(
@@ -227,9 +213,10 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
       );
       const tileWidth = this.getTileWidth(level);
       const tileHeight = this.getTileHeight(level);
+      const axisNames = this._image.getAxesNames();
       const array = this._arrays[this.maxLevel - level]!;
-      const maxTileWidth = array.shape[this._axisIndices.x]!;
-      const maxTileHeight = array.shape[this._axisIndices.y]!;
+      const maxTileWidth = array.shape[axisNames.indexOf("x")]!;
+      const maxTileHeight = array.shape[axisNames.indexOf("y")]!;
       this._image
         .renderArray({
           arr: array,
@@ -304,45 +291,5 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
       );
     }
     return channels.map((channel, i) => ({ ...channel, active: i === c }));
-  }
-
-  private static _getAxisIndices(axes: Axis[]): {
-    t?: number;
-    c?: number;
-    z?: number;
-    y: number;
-    x: number;
-  } {
-    let t: number | undefined = undefined;
-    let c: number | undefined = undefined;
-    let z: number | undefined = undefined;
-    let y: number | undefined = undefined;
-    let x: number | undefined = undefined;
-    for (let i = 0; i < axes.length; i++) {
-      const axis = axes[i]!;
-      switch (axis.name) {
-        case "t":
-          t = i;
-          break;
-        case "c":
-          c = i;
-          break;
-        case "z":
-          z = i;
-          break;
-        case "y":
-          y = i;
-          break;
-        case "x":
-          x = i;
-          break;
-        default:
-          throw new Error(`unsupported axis: ${axis.name}`);
-      }
-    }
-    if (x === undefined || y === undefined) {
-      throw new Error("missing X or Y axis");
-    }
-    return { t, c, z, y, x };
   }
 }
