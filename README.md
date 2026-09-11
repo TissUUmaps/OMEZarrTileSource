@@ -40,8 +40,8 @@ const tileSource2 = {
     url: url,
     // zip: undefined,  // undefined = OME-Zarr ZIP auto-detection based on .ozx suffix
     // c: undefined,  // undefined = composite of all active channels (requires dataType "context2d")
-    // z: undefined,  // undefined = omero metadata default
-    // t: undefined,  // undefined = omero metadata default
+    // z: undefined,  // undefined = omero rdefs default (middle z-slice if missing)
+    // t: undefined,  // undefined = omero rdefs default (middle timepoint if missing)
     // dataType: undefined,  // "context2d" (default, rendered tiles) or "ome-zarr" (raw single-channel chunks)
     // autoBoost: undefined  // boost brightness of dark tiles (default false)
 };
@@ -54,8 +54,8 @@ const tileSource4 = new OMEZarrTileSource({
     url: url,
     // zip: undefined,  // undefined = OME-Zarr ZIP auto-detection based on .ozx suffix
     // c: undefined,  // undefined = composite of all active channels (requires dataType "context2d")
-    // z: undefined,  // undefined = omero metadata default
-    // t: undefined,  // undefined = omero metadata default
+    // z: undefined,  // undefined = omero rdefs default (middle z-slice if missing)
+    // t: undefined,  // undefined = omero rdefs default (middle timepoint if missing)
     // dataType: undefined,  // "context2d" (default, rendered tiles) or "ome-zarr" (raw single-channel chunks)
     // autoBoost: undefined  // boost brightness of dark tiles (default false)
 });
@@ -102,6 +102,11 @@ passed to OpenSeadragon as 2D canvas contexts, using the rendering settings
 (color, color LUT/map, contrast limits, inversion) from the omero metadata. For
 multi-channel images without `c`, all active channels are rendered into a
 composite image.
+
+Contrast limits are taken from the omero channel windows (`window.start`,
+`window.end`). Channels without them are rendered using the data type range
+for integer types (e.g. `[0, 65535]` for `uint16`) and `[0, 1]` for floating
+point types.
 
 With `dataType: "ome-zarr"`, tiles are instead downloaded as raw single-channel
 zarrita chunks and passed to OpenSeadragon with the data type `ome-zarr` (see

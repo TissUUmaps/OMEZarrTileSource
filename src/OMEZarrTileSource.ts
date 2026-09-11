@@ -3,7 +3,6 @@ import {
   type Channel,
   NgffImage,
   type Omero,
-  getMinMaxValues,
   getSlices,
   renderChunks,
 } from "ome-zarr.js";
@@ -158,30 +157,47 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
           throw new Error("X axis must come after Y axis");
         }
         const arrays = await Promise.all(
-          image.paths.map((path) => image.openArray(path)),
+          image.paths.map(
+            (path) =>
+              image.openArray(path) as Promise<
+                zarr.Array<zarr.NumberDataType | zarr.BigintDataType>
+              >,
+          ),
         );
-        const channelAxis = axisNames.indexOf("c");
-        const numChannels =
-          channelAxis >= 0 ? arrays[0]!.shape[channelAxis]! : 1;
-        if (this.z !== undefined) {
-          image.setZIndex(this.z);
+        const tAxis = axisNames.indexOf("t");
+        const sizeT = tAxis >= 0 ? arrays[0]!.shape[tAxis]! : 1;
+        if (this.t !== undefined && (this.t < 0 || this.t >= sizeT)) {
+          throw new Error(
+            `Invalid t index ${this.t} for image with ${sizeT} timepoints`,
+          );
         }
-        if (this.t !== undefined) {
-          image.setTIndex(this.t);
+        const zAxis = axisNames.indexOf("z");
+        const sizeZ = zAxis >= 0 ? arrays[0]!.shape[zAxis]! : 1;
+        if (this.z !== undefined && (this.z < 0 || this.z >= sizeZ)) {
+          throw new Error(
+            `Invalid z index ${this.z} for image with ${sizeZ} z-slices`,
+          );
+        }
+        const cAxis = axisNames.indexOf("c");
+        const sizeC = cAxis >= 0 ? arrays[0]!.shape[cAxis]! : 1;
+        if (this.c !== undefined && (this.c < 0 || this.c >= sizeC)) {
+          throw new Error(
+            `Invalid c index ${this.c} for image with ${sizeC} channels`,
+          );
         }
         if (
           this.dataType !== "context2d" &&
           this.c === undefined &&
-          numChannels > 1
+          sizeC > 1
         ) {
           throw new Error(
-            `Multi-channel image with ${numChannels} channels; specify c or render as "context2d"`,
+            `Multi-channel image with ${sizeC} channels; specify c or render as "context2d"`,
           );
         }
         const omero = image.checkChannelIndex(this.c ?? 0);
-        if (omero.channels.length !== numChannels) {
+        if (omero.channels.length !== sizeC) {
           throw new Error(
-            `OME-Zarr metadata lists ${omero.channels.length} channels, but the image has ${numChannels}`,
+            `OME-Zarr metadata lists ${omero.channels.length} channels, but the image has ${sizeC}`,
           );
         }
         if (this._getActiveChannelIndices(omero).length === 0) {
@@ -300,8 +316,8 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
         {
           x: [x * tileWidth, (x + 1) * tileWidth], // clamped by zarrita
           y: [y * tileHeight, (y + 1) * tileHeight], // clamped by zarrita
-          z: omero.rdefs.defaultZ,
-          t: omero.rdefs.defaultT,
+          z: this.z ?? omero.rdefs?.defaultZ, // undefined = middle plane
+          t: this.t ?? omero.rdefs?.defaultT, // undefined = middle plane
         },
       ) as (number | zarr.Slice | null)[][];
       Promise.all(
@@ -407,7 +423,7 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
         const [vmin, vmax] =
           channel.window.start !== undefined && channel.window.end !== undefined
             ? [channel.window.start, channel.window.end]
-            : getMinMaxValues(chunks[i]);
+            : OMEZarrTileSource._getDataTypeRange(chunks[i]!);
         return vmin < vmax ? [vmin, vmax] : [vmin, vmin + 1];
       },
     );
@@ -431,5 +447,36 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
     const data = new ImageData(rgba, width, height);
     ctx.putImageData(data, 0, 0);
     return ctx;
+  }
+
+  private static _getDataTypeRange(
+    chunk: zarr.Chunk<zarr.NumberDataType | zarr.BigintDataType>,
+  ): [number, number] {
+    const { data } = chunk;
+    if (data instanceof Int8Array) {
+      return [-128, 127];
+    }
+    if (data instanceof Uint8Array) {
+      return [0, 255];
+    }
+    if (data instanceof Int16Array) {
+      return [-32768, 32767];
+    }
+    if (data instanceof Uint16Array) {
+      return [0, 65535];
+    }
+    if (data instanceof Int32Array) {
+      return [-2147483648, 2147483647];
+    }
+    if (data instanceof Uint32Array) {
+      return [0, 4294967295];
+    }
+    if (data instanceof BigInt64Array) {
+      return [-(2 ** 63), 2 ** 63 - 1]; // not exactly representable as number
+    }
+    if (data instanceof BigUint64Array) {
+      return [0, 2 ** 64 - 1]; // not exactly representable as number
+    }
+    return [0, 1]; // floating point (and bool)
   }
 }

@@ -14,9 +14,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Channels without `window.start`/`window.end` in the omero metadata are now rendered using the data type range (integer types) or `[0, 1]` (floating point types) instead of the per-tile minimum/maximum
+- The OME-Zarr metadata (`image`) is treated as read-only: the `z` and `t` options are applied when requesting tiles instead of modifying the omero `rdefs`
+- The `c`, `z` and `t` options are validated against the image shape when loading the image; invalid indices fail with `open-failed` instead of failing individual tiles
+
 ### Fixed
 
 - Errors thrown while rendering a tile (e.g. failing to get a 2D canvas context) now fail the tile download instead of leaving the tile pending with an unhandled promise rejection
+- Images whose omero metadata lacks `rdefs` can now be rendered (the middle z-slice/timepoint is used unless `z`/`t` are specified)
 
 ### Removed
 
