@@ -12,7 +12,7 @@ An OpenSeadragon tile source for the OME-Zarr bioimage file format
 
 ## Prerequisites
 
-OpenSeadragon 5 or newer
+OpenSeadragon 6 or newer
 
 ## Installation
 
@@ -39,9 +39,11 @@ const tileSource2 = {
     type: "ome-zarr",
     url: url,
     // zip: undefined,  // undefined = OME-Zarr ZIP auto-detection based on .ozx suffix
-    // t: undefined,
-    // c: undefined,
-    // z: undefined
+    // c: undefined,  // undefined = composite of all active channels (requires dataType "context2d")
+    // z: undefined,  // undefined = omero metadata default
+    // t: undefined,  // undefined = omero metadata default
+    // dataType: undefined,  // "context2d" (default, rendered tiles) or "ome-zarr" (raw single-channel chunks)
+    // autoBoost: undefined  // boost brightness of dark tiles (default false)
 };
 
 // direct instantiation with URL (works with any OME-Zarr storage backend)
@@ -51,9 +53,11 @@ const tileSource3 = new OMEZarrTileSource(url);
 const tileSource4 = new OMEZarrTileSource({
     url: url,
     // zip: undefined,  // undefined = OME-Zarr ZIP auto-detection based on .ozx suffix
-    // t: undefined,
-    // c: undefined,
-    // z: undefined
+    // c: undefined,  // undefined = composite of all active channels (requires dataType "context2d")
+    // z: undefined,  // undefined = omero metadata default
+    // t: undefined,  // undefined = omero metadata default
+    // dataType: undefined,  // "context2d" (default, rendered tiles) or "ome-zarr" (raw single-channel chunks)
+    // autoBoost: undefined  // boost brightness of dark tiles (default false)
 });
 
 const viewer = OpenSeadragon(
@@ -66,6 +70,25 @@ const viewer = OpenSeadragon(
     ]
 );
 ```
+
+## Data pipeline
+
+By default (`dataType: "context2d"`), tiles are rendered by the tile source and
+passed to OpenSeadragon as 2D canvas contexts, using the rendering settings
+(color, color LUT/map, contrast limits, inversion) from the omero metadata. For
+multi-channel images without `c`, all active channels are rendered into a
+composite image.
+
+With `dataType: "ome-zarr"`, tiles are instead downloaded as raw single-channel
+zarrita chunks and passed to OpenSeadragon with the data type `ome-zarr` (see
+the `OMEZarrTileData` type). Multi-channel images therefore require the `c`
+option. A converter from `ome-zarr` to `context2d` is registered on
+`OpenSeadragon.converter` when the module is imported (and by
+`OMEZarrTileSource.enable`). It reads the rendering settings at conversion time
+from the omero channel referenced by the tile data (`OMEZarrTileData.channel`).
+The channel object is shared by all tiles of a tile source, so advanced users
+may modify it (e.g. from a `tile-invalidated` handler) and re-render the cached
+tiles using `viewer.requestInvalidate()`.
 
 ## Example
 

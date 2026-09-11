@@ -2,7 +2,7 @@ import { OMEZarrTileSource } from "./OMEZarrTileSource";
 
 export {
   OMEZarrTileSource,
-  type OMEZarrTileSourceClass,
+  type OMEZarrTileData,
   type OMEZarrTileSourceOptions,
 } from "./OMEZarrTileSource";
 
