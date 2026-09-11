@@ -3,11 +3,6 @@ import { NgffImage } from "ome-zarr.js";
 import OpenSeadragon from "openseadragon";
 import type * as zarr from "zarrita";
 
-export type OMEZarrTileSourceClass = typeof OMEZarrTileSource;
-declare module "openseadragon" {
-  let OMEZarrTileSource: OMEZarrTileSourceClass;
-}
-
 type UserData = {
   abortController?: AbortController;
 };
@@ -272,6 +267,6 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
   }
 
   static enable(os: typeof OpenSeadragon = OpenSeadragon): void {
-    os.OMEZarrTileSource = OMEZarrTileSource;
+    Object.assign(os, { OMEZarrTileSource });
   }
 }
