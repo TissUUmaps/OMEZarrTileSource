@@ -1,5 +1,5 @@
 import { ZipFileStore } from "@zarrita/storage";
-import { type Multiscale, type Omero, renderImage } from "ome-zarr.js";
+import { type Axis, type Channel, NgffImage } from "ome-zarr.js";
 import OpenSeadragon from "openseadragon";
 import * as zarr from "zarrita";
 
@@ -38,8 +38,7 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
   readonly t?: number;
   readonly c?: number;
   readonly z?: number;
-  private _omero?: Omero;
-  private _multiscale?: Multiscale;
+  private _image?: NgffImage;
   private _axisIndices?: {
     t?: number;
     c?: number;
@@ -112,22 +111,17 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
       this.zip || (this.zip === undefined && url.endsWith(".ozx"))
         ? ZipFileStore.fromUrl(url)
         : new zarr.FetchStore(url);
-    zarr
-      .open(store, { kind: "group" })
-      .then(async (group) => {
-        console.debug(`opened group for ${url}`);
-        const { multiscale, omero } = OMEZarrTileSource._getMultiscale(group);
-        const axisIndices = OMEZarrTileSource._getAxisIndices(multiscale);
+    NgffImage.load(store)
+      .then(async (image) => {
+        console.debug(`loaded image for ${url}`);
+        const axisIndices = OMEZarrTileSource._getAxisIndices(image.axes);
         const arrays = await Promise.all(
-          multiscale.datasets.map((dataset) =>
-            zarr.open(group.resolve(dataset.path), { kind: "array" }),
-          ),
+          image.paths.map((path) => image.openArray(path)),
         );
         console.debug(`opened ${arrays.length} arrays for ${url}`);
         const maxWidth = arrays[0]!.shape[axisIndices.x]!;
         const maxHeight = arrays[0]!.shape[axisIndices.y]!;
-        this._omero = omero;
-        this._multiscale = multiscale;
+        this._image = image;
         this._axisIndices = axisIndices;
         this._arrays = arrays;
         this.width = maxWidth;
@@ -140,8 +134,7 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
         this.raiseEvent("ready", { tileSource: this });
       })
       .catch((reason) => {
-        this._omero = undefined;
-        this._multiscale = undefined;
+        this._image = undefined;
         this._axisIndices = undefined;
         this._arrays = undefined;
         this.width = 10;
@@ -226,7 +219,7 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
     const y = +urlSearchParams.get("y")!;
     try {
       if (
-        this._multiscale === undefined ||
+        this._image === undefined ||
         this._axisIndices === undefined ||
         this._arrays === undefined
       ) {
@@ -240,13 +233,21 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
       const array = this._arrays[this.maxLevel - level]!;
       const maxTileWidth = array.shape[this._axisIndices.x]!;
       const maxTileHeight = array.shape[this._axisIndices.y]!;
-      renderImage(array, this._multiscale.axes, this._omero, {
-        x: [x * tileWidth, Math.min((x + 1) * tileWidth, maxTileWidth)],
-        y: [y * tileHeight, Math.min((y + 1) * tileHeight, maxTileHeight)],
-        z: this.z,
-        c: this.c,
-        t: this.t,
-      }) // TODO https://github.com/BioNGFF/ome-zarr.js/pull/26
+      this._image
+        .render({
+          arr: array,
+          slices: {
+            x: [x * tileWidth, Math.min((x + 1) * tileWidth, maxTileWidth)],
+            y: [y * tileHeight, Math.min((y + 1) * tileHeight, maxTileHeight)],
+            z: this.z,
+            t: this.t,
+          },
+          channels:
+            this.c !== undefined
+              ? OMEZarrTileSource._getChannels(this._image, this.c)
+              : undefined,
+          signal: abortController.signal,
+        })
         .then(async (dataUrl) => {
           abortController.signal.throwIfAborted();
           console.debug(`rendered tile for level=${level}, x=${x}, y=${y}`);
@@ -304,27 +305,17 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
     os.OMEZarrTileSource = OMEZarrTileSource;
   }
 
-  // TODO https://github.com/BioNGFF/ome-zarr.js/pull/27
-  private static _getMultiscale<T extends zarr.Readable>(
-    group: zarr.Group<T>,
-  ): { multiscale: Multiscale; omero?: Omero } {
-    let metadata = group.attrs as Record<string, unknown>;
-    if ("ome" in metadata) {
-      metadata = metadata["ome"] as Record<string, unknown>;
+  private static _getChannels(image: NgffImage, c: number): Channel[] {
+    const channels = image.omero?.channels ?? [];
+    if (c < 0 || c >= channels.length) {
+      throw new Error(
+        `channel index ${c} out of bounds for ${channels.length} channels`,
+      );
     }
-    if (!("multiscales" in metadata)) {
-      throw new Error("missing OME-Zarr multiscales metadata");
-    }
-    const multiscales = metadata["multiscales"] as Multiscale[];
-    if (multiscales.length === 0) {
-      throw new Error("empty OME-Zarr multiscales metadata");
-    }
-    const multiscale = multiscales[0]!;
-    const omero = metadata["omero"] as Omero | undefined;
-    return { multiscale, omero };
+    return channels.map((channel, i) => ({ ...channel, active: i === c }));
   }
 
-  private static _getAxisIndices(multiscale: Multiscale): {
+  private static _getAxisIndices(axes: Axis[]): {
     t?: number;
     c?: number;
     z?: number;
@@ -336,8 +327,8 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
     let z: number | undefined = undefined;
     let y: number | undefined = undefined;
     let x: number | undefined = undefined;
-    for (let i = 0; i < multiscale.axes.length; i++) {
-      const axis = multiscale.axes[i]!;
+    for (let i = 0; i < axes.length; i++) {
+      const axis = axes[i]!;
       switch (axis.name) {
         case "t":
           t = i;

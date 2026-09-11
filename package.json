@@ -39,8 +39,8 @@
   },
   "dependencies": {
     "@zarrita/storage": "0.2.0",
-    "ome-zarr.js": "0.0.19",
-    "zarrita": "0.5.4"
+    "ome-zarr.js": "0.0.20",
+    "zarrita": "0.7.5"
   },
   "peerDependencies": {
     "openseadragon": ">=6.0.0 <7.0.0"
