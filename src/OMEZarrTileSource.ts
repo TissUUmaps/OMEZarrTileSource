@@ -141,8 +141,8 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
     if (level < 0 || level > this.maxLevel) {
       throw new Error("level out of bounds");
     }
-    const levelArray = this._arrays[this.maxLevel - level]!;
-    return levelArray.chunks[this._image.getAxesNames().indexOf("x")]!;
+    const array = this._arrays[this.maxLevel - level]!;
+    return array.chunks[this._image.getAxesNames().indexOf("x")]!;
   }
 
   getTileHeight(level: number): number {
@@ -152,8 +152,8 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
     if (level < 0 || level > this.maxLevel) {
       throw new Error("level out of bounds");
     }
-    const levelArray = this._arrays[this.maxLevel - level]!;
-    return levelArray.chunks[this._image.getAxesNames().indexOf("y")]!;
+    const array = this._arrays[this.maxLevel - level]!;
+    return array.chunks[this._image.getAxesNames().indexOf("y")]!;
   }
 
   getLevelScale(level: number): number {
@@ -163,9 +163,9 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
     if (level < 0 || level > this.maxLevel) {
       throw new Error("level out of bounds");
     }
+    const array = this._arrays[this.maxLevel - level]!;
     const xAxisIndex = this._image.getAxesNames().indexOf("x");
-    const levelArray = this._arrays[this.maxLevel - level]!;
-    const levelWidth = levelArray.shape[xAxisIndex]!;
+    const levelWidth = array.shape[xAxisIndex]!;
     const width = this._arrays[0]!.shape[xAxisIndex]!;
     return levelWidth / width;
   }
