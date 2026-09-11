@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - OpenSeadragon data type `ome-zarr` (see `OMEZarrTileData`) with converters to `context2d` and for copying
-- Options `color`, `colorLUT`, `colorMap`, `contrastLimits` and `inverted` to override the channel rendering settings from the omero metadata
+- Option `dataType` to choose between `context2d` tiles rendered by the tile source (default; composite of all active channels for multi-channel images without `c`) and raw `ome-zarr` tile data
 - Option `autoBoost` to boost the brightness of dark tiles (ome-zarr.js `renderChunks` autoBoost)
 
 ### Changed
@@ -19,8 +19,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated OpenSeadragon to 6.1.1
 - Updated ome-zarr.js to 0.0.20 and zarrita to 0.7.5
 - Switched from the deprecated `renderImage` function to `NgffImage` for loading and `getSlices`/`renderChunks` for rendering
-- Tiles are downloaded as raw single-channel zarrita chunks (OpenSeadragon data type `ome-zarr`) and rendered to `context2d` by a registered converter, so tiles can be re-rendered from cache without re-downloading
-- Multi-channel images require the `c` option
+- Tiles are rendered by the tile source (`dataType` `"context2d"`, default) or downloaded as raw single-channel zarrita chunks (`dataType` `"ome-zarr"`) that are rendered to `context2d` by a registered converter, so tiles can be re-rendered from cache without re-downloading
+- Images with the X axis before the Y axis are rejected
+- Images whose omero metadata lists a different number of channels than the image has are rejected
+- Multi-channel images require the `c` option for `dataType` `"ome-zarr"`
 - Aborted tile downloads now also cancel the underlying chunk requests
 
 ### Fixed
