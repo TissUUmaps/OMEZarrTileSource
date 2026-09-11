@@ -38,10 +38,16 @@ OMEZarrTileSource.enable(OpenSeadragon);
 const tileSource2 = {
     type: "ome-zarr",
     url: url,
+    // c: undefined,  // required for multi-channel images
+    // z: undefined,  // undefined = omero metadata default
+    // t: undefined,  // undefined = omero metadata default
     // zip: undefined,  // undefined = OME-Zarr ZIP auto-detection based on .ozx suffix
-    // t: undefined,
-    // c: undefined,
-    // z: undefined
+    // color: undefined,  // undefined = omero metadata
+    // colorLUT: undefined,  // undefined = omero metadata; takes precedence over colorMap
+    // colorMap: undefined,  // undefined = omero metadata
+    // contrastLimits: undefined,  // [ start, end ]; undefined = omero metadata
+    // inverted: undefined,  // undefined = omero metadata; ignored with colorMap
+    // autoBoost: undefined  // boost brightness of dark tiles (default false)
 };
 
 // direct instantiation with URL (works with any OME-Zarr storage backend)
@@ -50,10 +56,16 @@ const tileSource3 = new OMEZarrTileSource(url);
 // direct instantiation with options object (no prior enabling required)
 const tileSource4 = new OMEZarrTileSource({
     url: url,
+    // c: undefined,  // required for multi-channel images
+    // z: undefined,  // undefined = omero metadata default
+    // t: undefined,  // undefined = omero metadata default
     // zip: undefined,  // undefined = OME-Zarr ZIP auto-detection based on .ozx suffix
-    // t: undefined,
-    // c: undefined,
-    // z: undefined
+    // color: undefined,  // undefined = omero metadata
+    // colorLUT: undefined,  // undefined = omero metadata; takes precedence over colorMap
+    // colorMap: undefined,  // undefined = omero metadata
+    // contrastLimits: undefined,  // [ start, end ]; undefined = omero metadata
+    // inverted: undefined,  // undefined = omero metadata; ignored with colorMap
+    // autoBoost: undefined  // boost brightness of dark tiles (default false)
 });
 
 const viewer = OpenSeadragon(
@@ -66,6 +78,19 @@ const viewer = OpenSeadragon(
     ]
 );
 ```
+
+## Data pipeline
+
+Tiles are downloaded as raw single-channel zarrita chunks and passed to
+OpenSeadragon with the data type `ome-zarr` (see the `OMEZarrTileData` type).
+Multi-channel images therefore require the `c` option. A converter from
+`ome-zarr` to `context2d` is registered on `OpenSeadragon.converter` when the
+module is imported (and by `OMEZarrTileSource.enable`). It reads the rendering
+settings (color, color LUT/map, contrast limits, inversion) at conversion time
+from the omero channel referenced by the tile data (`OMEZarrTileData.channel`).
+The channel object is shared by all tiles of a tile source, so advanced users
+may modify it (e.g. from a `tile-invalidated` handler) and re-render the
+cached tiles using `viewer.requestInvalidate()`.
 
 ## Example
 
