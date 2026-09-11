@@ -224,16 +224,12 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
       );
       const tileWidth = this.getTileWidth(level);
       const tileHeight = this.getTileHeight(level);
-      const axisNames = this._image.getAxesNames();
-      const array = this._arrays[this.maxLevel - level]!;
-      const maxTileWidth = array.shape[axisNames.indexOf("x")]!;
-      const maxTileHeight = array.shape[axisNames.indexOf("y")]!;
       this._image
         .renderArray({
-          arr: array,
+          arr: this._arrays[this.maxLevel - level]!,
           slices: {
-            x: [x * tileWidth, Math.min((x + 1) * tileWidth, maxTileWidth)],
-            y: [y * tileHeight, Math.min((y + 1) * tileHeight, maxTileHeight)],
+            x: [x * tileWidth, (x + 1) * tileWidth],
+            y: [y * tileHeight, (y + 1) * tileHeight],
           },
           signal: abortController.signal,
         })
