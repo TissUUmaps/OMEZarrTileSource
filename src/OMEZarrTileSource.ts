@@ -1,5 +1,5 @@
 import { ZipFileStore } from "@zarrita/storage";
-import { type Channel, NgffImage } from "ome-zarr.js";
+import { NgffImage } from "ome-zarr.js";
 import OpenSeadragon from "openseadragon";
 import * as zarr from "zarrita";
 
@@ -113,6 +113,17 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
           image.paths.map((path) => image.openArray(path)),
         );
         console.debug(`opened ${arrays.length} arrays for ${url}`);
+        if (this.c !== undefined) {
+          image.checkChannelIndex(this.c).channels.forEach((_, i) => {
+            image.setChannelActive(i, i === this.c);
+          });
+        }
+        if (this.z !== undefined) {
+          image.setZIndex(this.z);
+        }
+        if (this.t !== undefined) {
+          image.setTIndex(this.t);
+        }
         const width = arrays[0]!.shape[axisNames.indexOf("x")]!;
         const height = arrays[0]!.shape[axisNames.indexOf("y")]!;
         this._image = image;
@@ -223,13 +234,7 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
           slices: {
             x: [x * tileWidth, Math.min((x + 1) * tileWidth, maxTileWidth)],
             y: [y * tileHeight, Math.min((y + 1) * tileHeight, maxTileHeight)],
-            z: this.z,
-            t: this.t,
           },
-          channels:
-            this.c !== undefined
-              ? OMEZarrTileSource._getChannels(this._image, this.c)
-              : undefined,
           signal: abortController.signal,
         })
         .then(({ data, width, height }) => {
@@ -281,15 +286,5 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
 
   static enable(os: typeof OpenSeadragon = OpenSeadragon): void {
     os.OMEZarrTileSource = OMEZarrTileSource;
-  }
-
-  private static _getChannels(image: NgffImage, c: number): Channel[] {
-    const channels = image.omero?.channels ?? [];
-    if (c < 0 || c >= channels.length) {
-      throw new Error(
-        `channel index ${c} out of bounds for ${channels.length} channels`,
-      );
-    }
-    return channels.map((channel, i) => ({ ...channel, active: i === c }));
   }
 }
