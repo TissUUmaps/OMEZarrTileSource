@@ -10,7 +10,6 @@ declare module "openseadragon" {
 
 type UserData = {
   abortController?: AbortController;
-  img?: HTMLImageElement;
 };
 
 export interface OMEZarrTileSourceOptions {
@@ -234,7 +233,7 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
       const maxTileWidth = array.shape[this._axisIndices.x]!;
       const maxTileHeight = array.shape[this._axisIndices.y]!;
       this._image
-        .render({
+        .renderArray({
           arr: array,
           slices: {
             x: [x * tileWidth, Math.min((x + 1) * tileWidth, maxTileWidth)],
@@ -248,28 +247,26 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
               : undefined,
           signal: abortController.signal,
         })
-        .then(async (dataUrl) => {
+        .then(({ data, width, height }) => {
           abortController.signal.throwIfAborted();
           console.debug(`rendered tile for level=${level}, x=${x}, y=${y}`);
-          const img = await new Promise<HTMLImageElement>((resolve, reject) => {
-            const img = new Image();
-            userData.img = img;
-            img.onload = () => resolve(img);
-            img.onerror = (reason) => reject(new Error(reason as string));
-            img.onabort = () => {
-              if (!abortController.signal.aborted) {
-                abortController.abort();
-              }
-              const reason = abortController.signal.reason as unknown;
-              reject(
-                reason instanceof Error ? reason : new Error(String(reason)),
-              );
-            };
-            img.src = dataUrl;
-          });
-          abortController.signal.throwIfAborted();
-          console.debug(`loaded tile for level=${level}, x=${x}, y=${y}`);
-          context.finish(img, OMEZarrTileSource.DUMMY_XHR, "image");
+          const canvas = document.createElement("canvas");
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          if (ctx === null) {
+            throw new Error("failed to get 2D canvas context");
+          }
+          ctx.putImageData(
+            new ImageData(
+              data as Uint8ClampedArray<ArrayBuffer>,
+              width,
+              height,
+            ),
+            0,
+            0,
+          );
+          context.finish(ctx, OMEZarrTileSource.DUMMY_XHR, "context2d");
         })
         .catch((reason) => {
           if (abortController.signal.aborted) {
@@ -294,10 +291,6 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
     if (userData.abortController !== undefined) {
       userData.abortController.abort();
       userData.abortController = undefined;
-    }
-    if (userData.img !== undefined) {
-      userData.img.src = "";
-      userData.img = undefined;
     }
   }
 

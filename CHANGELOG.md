@@ -14,7 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Require OpenSeadragon 6 or newer (peer dependency `>=6.0.0 <7.0.0`)
 - Updated OpenSeadragon to 6.1.1
 - Updated ome-zarr.js to 0.0.20 and zarrita to 0.7.5
-- Switched from the deprecated `renderImage` function to the `NgffImage.render` API
+- Switched from the deprecated `renderImage` function to the `NgffImage.renderArray` API
+- Tiles are passed to OpenSeadragon as 2D canvas contexts instead of PNG images, skipping the PNG encode/decode per tile
 - Aborted tile downloads now also cancel the underlying chunk requests
 
 ### Fixed
