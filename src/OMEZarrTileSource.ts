@@ -3,10 +3,6 @@ import { NgffImage } from "ome-zarr.js";
 import OpenSeadragon from "openseadragon";
 import type * as zarr from "zarrita";
 
-type UserData = {
-  abortController?: AbortController;
-};
-
 export interface OMEZarrTileSourceOptions {
   type?: "ome-zarr";
   url: string; // TileSource.url
@@ -200,7 +196,7 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
   }
 
   downloadTileStart(context: OpenSeadragon.ImageJob): void {
-    const userData = context.userData as UserData;
+    const userData = context.userData as { abortController?: AbortController };
     const abortController = new AbortController();
     userData.abortController = abortController;
     const urlSearchParams = new URLSearchParams(context.src);
@@ -259,7 +255,7 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
   }
 
   downloadTileAbort(context: OpenSeadragon.ImageJob): void {
-    const userData = context.userData as UserData;
+    const userData = context.userData as { abortController?: AbortController };
     if (userData.abortController !== undefined) {
       userData.abortController.abort();
       userData.abortController = undefined;
