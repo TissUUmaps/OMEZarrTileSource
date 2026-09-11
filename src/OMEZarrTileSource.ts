@@ -164,10 +164,8 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
       throw new Error("level out of bounds");
     }
     const array = this._arrays[this.maxLevel - level]!;
-    const xAxisIndex = this._image.getAxesNames().indexOf("x");
-    const levelWidth = array.shape[xAxisIndex]!;
-    const width = this._arrays[0]!.shape[xAxisIndex]!;
-    return levelWidth / width;
+    const width = array.shape[this._image.getAxesNames().indexOf("x")]!;
+    return width / this.width;
   }
 
   getTileUrl(level: number, x: number, y: number): string {
