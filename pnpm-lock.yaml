@@ -42,8 +42,8 @@ importers:
         specifier: ^17.0.5
         version: 17.0.5
       openseadragon:
-        specifier: ">=5.0.1 <7.0.0"
-        version: 6.0.2
+        specifier: ^6.1.1
+        version: 6.1.1
       prettier:
         specifier: ^3.8.3
         version: 3.8.3
@@ -2167,10 +2167,10 @@ packages:
       }
     engines: { node: ">=18" }
 
-  openseadragon@6.0.2:
+  openseadragon@6.1.1:
     resolution:
       {
-        integrity: sha512-WNPPQWp9sHunyzkV9J2yhfxnSfDF9CfBsE6unmkdxh1uTWzFcueMvBPhmuZdY7M1v/ffJ3NdaF3Qq3jogphIbA==,
+        integrity: sha512-g4iKe2q8B642SaBT3+x4ZF3/8b1TxPPydyjmtrOLgDrlYWMKd9ZXM+1Cb/xa9DVySkvs/7l6HR1nHKfD5F3Tsw==,
       }
 
   optionator@0.9.4:
@@ -4377,7 +4377,7 @@ snapshots:
     dependencies:
       mimic-function: 5.0.1
 
-  openseadragon@6.0.2: {}
+  openseadragon@6.1.1: {}
 
   optionator@0.9.4:
     dependencies:
