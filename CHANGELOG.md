@@ -15,6 +15,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
+## [0.5.0] - 2026-09-12
+
+### Changed
+
+- The package is now a pure ES module library: the `main` field and the `require` export condition have been dropped along with the UMD build
+- `zarrita`, `@zarrita/storage` and `ome-zarr.js` are now peer dependencies (with version ranges) instead of regular dependencies, so that the app and the tile source resolve a single module instance
+
+### Fixed
+
+- The runtime dependencies `zarrita`, `@zarrita/storage` and `ome-zarr.js` are no longer bundled into the library build but imported from the consuming app's installation, so that a single copy is shared (required for passing `NgffImage` instances created by the app, and reduces the bundle from ~1.5 MB to ~9 kB)
+
+### Removed
+
+- UMD build (`dist/omezarr-tilesource.umd.cjs`)
+
 ## [0.4.0] - 2026-09-12
 
 ### Added
@@ -113,7 +128,8 @@ Complete package.json
 
 Initial release
 
-[unreleased]: https://github.com/TissUUmaps/OMEZarrTileSource/compare/v0.4.0...HEAD
+[unreleased]: https://github.com/TissUUmaps/OMEZarrTileSource/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/TissUUmaps/OMEZarrTileSource/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/TissUUmaps/OMEZarrTileSource/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/TissUUmaps/OMEZarrTileSource/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/TissUUmaps/OMEZarrTileSource/compare/v0.1.2...v0.2.0

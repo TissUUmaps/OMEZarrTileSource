@@ -22,6 +22,14 @@ Using pnpm:
 pnpm add omezarr-tilesource
 ```
 
+The package is distributed as an ES module for use with a bundler (e.g. Vite).
+[zarrita](https://github.com/manzt/zarrita.js),
+[@zarrita/storage](https://github.com/manzt/zarrita.js) and
+[ome-zarr.js](https://github.com/BioNGFF/ome-zarr.js) are peer dependencies
+(installed automatically by pnpm and npm 7 or newer) and are not bundled, so
+the app and the tile source share a single copy, e.g. for passing `NgffImage`
+instances loaded by the app.
+
 ## Usage
 
 ```javascript
@@ -60,7 +68,7 @@ const tileSource4 = new OMEZarrTileSource({
     // autoBoost: undefined  // boost brightness of dark tiles (default false)
 });
 
-const viewer = OpenSeadragon(
+const viewer = OpenSeadragon({
     ...
     tileSources: [
         tileSource1,
@@ -68,7 +76,7 @@ const viewer = OpenSeadragon(
         tileSource3,
         tileSource4
     ]
-);
+});
 ```
 
 ### Accessing OME-Zarr metadata
@@ -105,12 +113,18 @@ opened zarrita arrays, which ome-zarr.js caches on the `NgffImage` instance.
 The tile source never modifies the `NgffImage`, so sharing is safe:
 
 ```javascript
+import { NgffImage } from "ome-zarr.js";
+
+// reuse the image loaded by a first tile source
 const tileSource1 = await OMEZarrTileSource.open({ url: url, c: 0 });
 const tileSource2 = new OMEZarrTileSource(
   { url: url, c: 1 },
   tileSource1.image,
 );
-// or, without a first tile source: NgffImage.load(url) from ome-zarr.js
+
+// or load the image with the app's own ome-zarr.js import
+const image = await NgffImage.load(url);
+const tileSource3 = new OMEZarrTileSource({ url: url, c: 2 }, image);
 ```
 
 ## Data pipeline
