@@ -67,7 +67,7 @@ const tileSource4 = new OMEZarrTileSource({
     // autoBoost: undefined  // boost brightness of dark tiles (default false)
 });
 
-const viewer = OpenSeadragon(
+const viewer = OpenSeadragon({
     ...
     tileSources: [
         tileSource1,
@@ -75,7 +75,7 @@ const viewer = OpenSeadragon(
         tileSource3,
         tileSource4
     ]
-);
+});
 ```
 
 ### Accessing OME-Zarr metadata
