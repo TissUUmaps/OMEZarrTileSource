@@ -23,11 +23,12 @@ pnpm add omezarr-tilesource
 ```
 
 The package is distributed as an ES module for use with a bundler (e.g. Vite).
-Its runtime dependencies ([zarrita](https://github.com/manzt/zarrita.js),
+[zarrita](https://github.com/manzt/zarrita.js),
 [@zarrita/storage](https://github.com/manzt/zarrita.js) and
-[ome-zarr.js](https://github.com/BioNGFF/ome-zarr.js)) are installed alongside
-it and are not bundled, so the app can import them (e.g. `NgffImage` from
-ome-zarr.js) and share a single copy with the tile source.
+[ome-zarr.js](https://github.com/BioNGFF/ome-zarr.js) are peer dependencies
+(installed automatically by pnpm and npm 7 or newer) and are not bundled, so
+the app and the tile source share a single copy, e.g. for passing `NgffImage`
+instances loaded by the app.
 
 ## Usage
 

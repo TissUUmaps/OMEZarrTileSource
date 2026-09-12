@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - The package is now a pure ES module library: the `main` field and the `require` export condition have been dropped along with the UMD build
+- `zarrita`, `@zarrita/storage` and `ome-zarr.js` are now peer dependencies (with version ranges) instead of regular dependencies, so that the app and the tile source resolve a single module instance
 
 ### Fixed
 
