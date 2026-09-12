@@ -22,6 +22,13 @@ Using pnpm:
 pnpm add omezarr-tilesource
 ```
 
+The package is distributed as an ES module for use with a bundler (e.g. Vite).
+Its runtime dependencies ([zarrita](https://github.com/manzt/zarrita.js),
+[@zarrita/storage](https://github.com/manzt/zarrita.js) and
+[ome-zarr.js](https://github.com/BioNGFF/ome-zarr.js)) are installed alongside
+it and are not bundled, so the app can import them (e.g. `NgffImage` from
+ome-zarr.js) and share a single copy with the tile source.
+
 ## Usage
 
 ```javascript
@@ -105,12 +112,18 @@ opened zarrita arrays, which ome-zarr.js caches on the `NgffImage` instance.
 The tile source never modifies the `NgffImage`, so sharing is safe:
 
 ```javascript
+import { NgffImage } from "ome-zarr.js";
+
+// reuse the image loaded by a first tile source
 const tileSource1 = await OMEZarrTileSource.open({ url: url, c: 0 });
 const tileSource2 = new OMEZarrTileSource(
   { url: url, c: 1 },
   tileSource1.image,
 );
-// or, without a first tile source: NgffImage.load(url) from ome-zarr.js
+
+// or load the image with the app's own ome-zarr.js import
+const image = await NgffImage.load(url);
+const tileSource3 = new OMEZarrTileSource({ url: url, c: 2 }, image);
 ```
 
 ## Data pipeline

@@ -15,13 +15,11 @@
     "dist"
   ],
   "types": "./dist/omezarr-tilesource.d.ts",
-  "main": "./dist/omezarr-tilesource.umd.cjs",
   "module": "./dist/omezarr-tilesource.js",
   "exports": {
     ".": {
       "types": "./dist/omezarr-tilesource.d.ts",
-      "import": "./dist/omezarr-tilesource.js",
-      "require": "./dist/omezarr-tilesource.umd.cjs"
+      "import": "./dist/omezarr-tilesource.js"
     }
   },
   "scripts": {

@@ -11,9 +11,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The package is now a pure ES module library: the `main` field and the `require` export condition have been dropped along with the UMD build
+
 ### Fixed
 
+- The runtime dependencies `zarrita`, `@zarrita/storage` and `ome-zarr.js` are no longer bundled into the library build but imported from the consuming app's installation, so that a single copy is shared (required for passing `NgffImage` instances created by the app, and reduces the bundle from ~1.5 MB to ~9 kB)
+
 ### Removed
+
+- UMD build (`dist/omezarr-tilesource.umd.cjs`)
 
 ## [0.4.0] - 2026-09-12
 
