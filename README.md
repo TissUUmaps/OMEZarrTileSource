@@ -261,7 +261,12 @@ tiles with tile sources that configure different ones.
 
 ## Example
 
-[Example](https://tissuumaps.github.io/OMEZarrTileSource)
+[https://tissuumaps.github.io/OMEZarrTileSource?url=https://livingobjects.ebi.ac.uk/idr/zarr/v0.5/idr0062A/6001240_labels.zarr](https://tissuumaps.github.io/OMEZarrTileSource?url=https%3A%2F%2Flivingobjects.ebi.ac.uk%2Fidr%2Fzarr%2Fv0.5%2Fidr0062A%2F6001240_labels.zarr)
+
+The example page takes the URL of the OME-Zarr image from the mandatory `url`
+query parameter, and the timepoint index, the z-slice index and the channel
+indices from the optional `t`, `z` and `c` query parameters (repeat `c` for
+multiple channels).
 
 [Source code](index.html)
 
