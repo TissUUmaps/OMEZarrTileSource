@@ -63,8 +63,13 @@ const tileSource2 = {
 // direct instantiation with URL (works with any OME-Zarr storage backend)
 const tileSource3 = new OMEZarrTileSource(url);
 
+// direct instantiation with a File (or any Blob) holding a zipped OME-Zarr file,
+// e.g. from an <input type="file"> or a drop event; also accepted as `url` in
+// inline configurations and options objects (but not directly as a tile source)
+const tileSource4 = new OMEZarrTileSource(file);
+
 // direct instantiation with options object
-const tileSource4 = new OMEZarrTileSource({
+const tileSource5 = new OMEZarrTileSource({
     url: url,
     // zip: undefined,  // undefined = OME-Zarr ZIP auto-detection based on .ozx path suffix
     // t: undefined,  // undefined = omero rdefs default (middle timepoint if missing)
@@ -83,7 +88,8 @@ const viewer = OpenSeadragon({
         tileSource1,
         tileSource2,
         tileSource3,
-        tileSource4
+        tileSource4,
+        tileSource5
     ]
 });
 ```
@@ -92,8 +98,8 @@ const viewer = OpenSeadragon({
 
 | Option          | Type                                                    | Default                                                                        | Description                                                                                                                                                                             |
 | --------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `url`           | `string \| URL`                                         | (required)                                                                     | URL of the OME-Zarr image (group) or of a zipped OME-Zarr file, relative to the document base URL                                                                                       |
-| `zip`           | `boolean`                                               | `true` if the `url` path ends with `.ozx`                                      | Whether `url` points to a zipped OME-Zarr file                                                                                                                                          |
+| `url`           | `string \| URL \| Blob`                                 | (required)                                                                     | URL of the OME-Zarr image (group) or of a zipped OME-Zarr file, relative to the document base URL, or a `Blob` (e.g. a `File`) holding a zipped OME-Zarr file                           |
+| `zip`           | `boolean`                                               | `true` if the `url` path ends with `.ozx` or `url` is a `Blob`                 | Whether `url` points to a zipped OME-Zarr file; must not be `false` for a `Blob`                                                                                                        |
 | `t`             | `number`                                                | omero `rdefs.defaultT`, else middle plane                                      | Timepoint index (0-based)                                                                                                                                                               |
 | `z`             | `number`                                                | omero `rdefs.defaultZ`, else middle plane                                      | Z-slice index (0-based)                                                                                                                                                                 |
 | `c`             | `number \| number[]`                                    | all channels marked active in omero                                            | Channel index or indices (0-based) to render, composited in the given order. Arrays must be non-empty                                                                                   |
@@ -120,6 +126,16 @@ array is only checked against `c` if that is configured too.
 created; the resolved absolute URL is available as `tileSource.url` (always a
 string) and is used for loading, for the tile cache keys and for comparing tile
 sources.
+
+A `Blob` (e.g. a `File` picked by the user) is read with the zarrita
+`ZipFileStore.fromBlob` store, so it must hold a zipped OME-Zarr file
+(`zip: false` is rejected by the constructor). The `Blob` is available as
+`tileSource.blob`, and `tileSource.url` is an object URL created once per
+`Blob` instance (never revoked), so tile sources for the same `Blob` share
+cached tiles. OpenSeadragon only passes strings and plain objects to
+`supports`, so a `File` must be wrapped in an inline configuration
+(`{ type: "ome-zarr", url: file }`) or passed to the constructor rather than
+given to the viewer directly.
 
 ### Accessing OME-Zarr metadata
 
@@ -190,7 +206,8 @@ const tileSource2 = new OMEZarrTileSource(
 ```
 
 `loadOMEZarr(url, zip?, { signal })` loads the metadata with ome-zarr.js and
-opens the arrays of all resolution levels. An `OMEZarr` can also be assembled
+opens the arrays of all resolution levels; `url` may also be a `Blob` holding a
+zipped OME-Zarr file. An `OMEZarr` can also be assembled
 from an `NgffImage` loaded by the app, as long as `arrays` lists the
 opened arrays of `image.paths` in order. It is not checked against the URL of
 the tile source it is passed to.

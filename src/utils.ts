@@ -14,28 +14,28 @@ export type LUTOrColorMap =
   | (Color | [number, number, number, number])[]
   | Map<number, Color | [number, number, number, number]>;
 
-/**
- * 32-bit FNV-1a hash of a string, over its UTF-16 code units.
- *
- * @param text - Text to hash
- * @returns The hash, as an unsigned 32-bit integer
- */
-export function fnv1a(text: string): number {
-  let hash = 0x811c9dc5 >>> 0;
-  for (let i = 0; i < text.length; i++) {
-    hash = Math.imul(hash ^ text.charCodeAt(i), 0x01000193);
-  }
-  return hash >>> 0;
-}
+const blobUrls = new WeakMap<Blob, string>();
 
 /**
  * Resolves a URL against the document base URL.
  *
- * @param url - URL of the OME-Zarr image, as a string or a `URL`
+ * A `Blob` (e.g. a `File`) resolves to an object URL (`blob:`), created once
+ * per `Blob` instance (and never revoked) so that tile sources for the same
+ * `Blob` share a URL.
+ *
+ * @param url - URL of the OME-Zarr image, as a string or a `URL`, or a `Blob`
  * @returns The absolute URL
  * @throws If the URL is relative and there is no document base URL
  */
-export function resolveUrl(url: string | URL): URL {
+export function resolveUrl(url: string | URL | Blob): URL {
+  if (url instanceof Blob) {
+    let blobUrl = blobUrls.get(url);
+    if (blobUrl === undefined) {
+      blobUrl = URL.createObjectURL(url);
+      blobUrls.set(url, blobUrl);
+    }
+    return new URL(blobUrl);
+  }
   return new URL(url, globalThis.document?.baseURI);
 }
 
@@ -90,4 +90,18 @@ export function getDataTypeRange(
     return [0, 2 ** 64 - 1]; // not exactly representable as number
   }
   return [0, 1]; // floating point (and bool)
+}
+
+/**
+ * 32-bit FNV-1a hash of a string, over its UTF-16 code units.
+ *
+ * @param text - Text to hash
+ * @returns The hash, as an unsigned 32-bit integer
+ */
+export function fnv1a(text: string): number {
+  let hash = 0x811c9dc5 >>> 0;
+  for (let i = 0; i < text.length; i++) {
+    hash = Math.imul(hash ^ text.charCodeAt(i), 0x01000193);
+  }
+  return hash >>> 0;
 }
