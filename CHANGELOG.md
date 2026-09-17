@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+### Changed
+
+### Fixed
+
+### Removed
+
+## [0.6.0] - 2026-09-17
+
+### Added
+
 - `OMEZarrTileSource.loadOMEZarr(url, zip?, { signal })` loads the OME-Zarr metadata and opens the arrays of all resolution levels; the result (`OMEZarr`, `{ image, arrays }`) can be passed to the constructor or to `OMEZarrTileSource.open` to share one load across tile sources
 - `loaded` getter returning the `OMEZarr` (throws until ready)
 - `t`, `z` and `cs` getters returning the resolved indices (omero defaults or active channels if not configured), and `channels` getter returning the corresponding omero channel objects
@@ -162,7 +172,8 @@ Complete package.json
 
 Initial release
 
-[unreleased]: https://github.com/TissUUmaps/OMEZarrTileSource/compare/v0.5.0...HEAD
+[unreleased]: https://github.com/TissUUmaps/OMEZarrTileSource/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/TissUUmaps/OMEZarrTileSource/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/TissUUmaps/OMEZarrTileSource/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/TissUUmaps/OMEZarrTileSource/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/TissUUmaps/OMEZarrTileSource/compare/v0.2.0...v0.3.0
