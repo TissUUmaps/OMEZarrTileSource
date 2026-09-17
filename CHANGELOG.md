@@ -9,11 +9,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `OMEZarrTileSource.loadOMEZarr(url, zip?, { signal })` loads the OME-Zarr metadata and opens the arrays of all resolution levels; the result (`OMEZarr`, `{ image, arrays }`) can be passed to the constructor or to `OMEZarrTileSource.open` to share one load across tile sources
+- `loaded` getter returning the `OMEZarr` (throws until ready)
+- `t`, `z` and `cs` getters returning the resolved indices (omero defaults or active channels if not configured), and `channels` getter returning the corresponding omero channel objects
+- `getWidth(level)` and `getHeight(level)` returning the pixel size of a resolution level (default: full resolution)
+- `loadChunks(level, tile, { signal })` loading the zarrita chunks of the rendered channels for one tile or the whole level plane
+- `OMEZarrTileSource.render(tileData)` compositing `ome-zarr` tile data into a 2D canvas context; used by the `ome-zarr` to `context2d` converter and usable directly for chunks loaded with `loadChunks`
+- `range`, `color`, `lutOrColorMap` and `inverted` options: a single value for all rendered channels, or one value per rendered channel, overriding the contrast window, color, LUT/color map and inversion of the omero channels; an `undefined` entry falls back to the omero value of that channel
+- `ranges`, `colors`, `lutsOrColorMaps` and `inverteds` getters returning the resolved rendering settings, one entry per rendered channel
+- `LUTOrColorMap` type export (a color LUT or a color map, with optional alpha)
+- `signal` option (`AbortSignal`) for `OMEZarrTileSource.open`
+- `OMEZarr` and `Color` type exports
+- `resolveUrl(url)`, `isOZX(url)` and `getDataTypeRange(chunk)` helpers, previously private statics of the tile source, and an `fnv1a(text)` string hash
+- TSDoc comments for the public API
+
 ### Changed
+
+- **Breaking:** the `c` option now also accepts an array of channel indices that are composited in the given order, and the resolved indices are exposed by the new `cs` getter (always an array); `undefined` still renders all channels marked active in the omero metadata. An empty array is rejected
+- **Breaking:** tiles are always passed to OpenSeadragon as raw `ome-zarr` data and rendered by the registered converter; `OMEZarrTileData` now holds one chunk per rendered channel (`chunks`) and the fully resolved `renderChunks` arguments for that tile (`ranges`, `colors`, `lutsOrColorMaps`, `inverteds`) instead of a single `chunk`/`channel`
+- **Breaking:** the second argument of the constructor and of `OMEZarrTileSource.open` is an `OMEZarr` (`{ image, arrays }`) instead of an `NgffImage`
+- **Breaking:** `url` is resolved against the document base URL when the tile source is created, so `tileSource.url` (used for loading, tile cache keys and `equals`) is always an absolute URL string; the constructor throws for relative URLs that cannot be resolved
+- The `url` option, the constructor, `OMEZarrTileSource.open` and `OMEZarrTileSource.loadOMEZarr` accept a `URL` object in addition to a string
+- The constructor validates `c` and the rendering settings (and resolves the URL) before scheduling the metadata load, so an invalid configuration throws synchronously without starting a request
+- Explicit `c` no longer requires channels to be marked active in the omero metadata; the "No active channels" check only applies when `c` is not given
+- **Breaking:** all rendering settings are resolved when a tile is downloaded instead of when it is rendered, and `OMEZarrTileData.channels` has been removed; editing the omero channels of a loaded image no longer affects cached tiles, with or without `viewer.requestInvalidate()`
+- **Breaking:** `equals` and the tile cache key take the configured rendering settings into account, so tile sources of the same image that render it differently no longer share cached tiles
+- Images without omero metadata are accepted when passed as an `OMEZarr` and rendered in white using the data type range
+- The level scale and the number of tiles per level (`getNumTiles`) are derived from the actual array shape of each resolution level instead of the width-based scale; tile requests outside a level are rejected
+- `equals` compares the URL, `zip`, the resolved `t`, `z` and `cs` and the hash of the configured rendering settings, i.e. exactly the components of the tile cache key
+- The tile cache key includes the resolved `t`, `z` and `c` and the `zip` flag, so tile sources rendering the same data share cached tiles
+- `zip` is auto-detected from the `.ozx` suffix of the URL path (ignoring any query and fragment) in all constructor forms and defaults to `false` instead of `undefined`
 
 ### Fixed
 
+- Color LUTs are copied before rendering, so that the in-place `reverse()` of ome-zarr.js `renderChunks` no longer corrupts the LUT of an inverted channel
+
 ### Removed
+
+- **Breaking:** `dataType` option; every tile is `ome-zarr` data (see above)
+- **Breaking:** `image` and `arrays` getters; use `loaded.image` and `loaded.arrays`
 
 ## [0.5.0] - 2026-09-12
 
