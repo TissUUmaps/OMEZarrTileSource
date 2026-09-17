@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `colors` getter returns `undefined` (rendered as white) for omero channel colors that are not six-digit hex strings (with or without a leading `#`), instead of colors with `NaN` components
+
 ### Fixed
 
 ### Removed

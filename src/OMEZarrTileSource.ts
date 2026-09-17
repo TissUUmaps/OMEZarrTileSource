@@ -428,8 +428,9 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
   /**
    * The RGB colors of the rendered channels ({@link cs}): the configured
    * `colors` (as an array, even if a single color was configured), otherwise
-   * the colors of the corresponding omero {@link channels}, and `undefined`
-   * wherever those are.
+   * the colors of the corresponding omero {@link channels} (six-digit hex
+   * strings, with or without a leading `#`), and `undefined` wherever those
+   * are missing or malformed.
    *
    * Channels without a color (`undefined` entries, or `undefined` instead of
    * the whole array) are rendered in white.
@@ -440,7 +441,10 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
       if (channel === undefined) {
         return undefined;
       }
-      const hex = channel.color.replace(/^#/, "");
+      const hex = /^#?([0-9A-Fa-f]{6})$/.exec(channel.color)?.[1];
+      if (hex === undefined) {
+        return undefined;
+      }
       return [
         parseInt(hex.slice(0, 2), 16),
         parseInt(hex.slice(2, 4), 16),
