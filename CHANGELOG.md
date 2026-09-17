@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+### Changed
+
+### Fixed
+
+### Removed
+
+## [0.7.0] - 2026-09-17
+
+### Added
+
 - `url` (option, constructor argument, and `OMEZarrTileSource.open` / `loadOMEZarr` argument) accepts a `Blob` (e.g. a `File`) holding a zipped OME-Zarr file, read with the zarrita `ZipFileStore.fromBlob` store; `zip` defaults to `true` for a `Blob` and `zip: false` is rejected
 - `blob` property holding the configured `Blob`, if any; `url` is then an object URL created once per `Blob` instance (`resolveUrl` accepts a `Blob`), so tile sources for the same `Blob` compare equal and share cached tiles
 
@@ -177,7 +187,8 @@ Complete package.json
 
 Initial release
 
-[unreleased]: https://github.com/TissUUmaps/OMEZarrTileSource/compare/v0.6.0...HEAD
+[unreleased]: https://github.com/TissUUmaps/OMEZarrTileSource/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/TissUUmaps/OMEZarrTileSource/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/TissUUmaps/OMEZarrTileSource/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/TissUUmaps/OMEZarrTileSource/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/TissUUmaps/OMEZarrTileSource/compare/v0.3.0...v0.4.0
