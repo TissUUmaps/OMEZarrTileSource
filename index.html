@@ -17,12 +17,33 @@
 
       OMEZarrTileSource.enable(OpenSeadragon);
 
+      const searchParams = new URLSearchParams(window.location.search);
+
+      const url = searchParams.get("url");
+      if (url === null) {
+        throw new Error("Missing mandatory URL parameter 'url'");
+      }
+
+      let t = searchParams.get("t") ?? undefined;
+      if (t !== undefined) {
+        t = Number(t);
+      }
+
+      let z = searchParams.get("z") ?? undefined;
+      if (z !== undefined) {
+        z = Number(z);
+      }
+
+      let c = searchParams.getAll("c");
+      if (c.length > 0) {
+        c = c.map((c) => Number(c));
+      } else {
+        c = undefined;
+      }
+
       new OpenSeadragon.Viewer({
         id: "viewer",
-        tileSources: {
-          type: "ome-zarr",
-          url: "https://livingobjects.ebi.ac.uk/idr/zarr/v0.5/idr0062A/6001240_labels.zarr",
-        },
+        tileSources: { type: "ome-zarr", url, t, z, c },
         prefixUrl: "https://openseadragon.github.io/openseadragon/images/",
         timeout: 60000, // increase timeout for large images,
         minZoomImageRatio: 0, // allow zooming out indefinitely
