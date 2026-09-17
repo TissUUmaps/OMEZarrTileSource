@@ -40,6 +40,7 @@ import {
  */
 export class OMEZarrTileSource extends OpenSeadragon.TileSource {
   declare readonly url: string;
+  readonly blob?: Blob;
   readonly zip: boolean = false;
   private readonly _t?: number;
   private readonly _z?: number;
@@ -89,26 +90,36 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
    * metadata load across several tile sources for the same URL.
    *
    * @param url - URL of the OME-Zarr image or zipped OME-Zarr file, as a string
-   *   or a `URL`; relative URLs are resolved against the document base URL
+   *   or a `URL` (relative URLs are resolved against the document base URL),
+   *   or a `Blob` (e.g. a `File`) holding a zipped OME-Zarr file
    * @param zip - Whether the URL points to a zipped OME-Zarr file; defaults to
-   *   `true` for URLs whose path ends in `.ozx`
+   *   `true` for URLs whose path ends in `.ozx` and for `Blob`s
    * @param options - `signal` aborts the load
    * @returns The loaded image and its arrays, highest resolution first
-   * @throws If the URL is relative and there is no document base URL
+   * @throws If the URL is relative and there is no document base URL, or if
+   *   `zip` is `false` for a `Blob`
    */
   static async loadOMEZarr(
-    url: string | URL,
+    url: string | URL | Blob,
     zip?: boolean,
     options?: { signal?: AbortSignal },
   ): Promise<OMEZarr> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
-    url = resolveUrl(url);
-    zip ??= isOZX(url);
-    const image = await NgffImage.load(
-      zip ? ZipFileStore.fromUrl(url) : url.toString(),
-      { signal },
-    );
+    let store: ZipFileStore | string;
+    if (url instanceof Blob) {
+      if (zip === false) {
+        throw new Error("only zipped OME-Zarr files can be loaded from a Blob");
+      }
+      store = ZipFileStore.fromBlob(url);
+    } else {
+      const resolvedUrl = resolveUrl(url);
+      store =
+        (zip ?? isOZX(resolvedUrl))
+          ? ZipFileStore.fromUrl(resolvedUrl)
+          : url.toString();
+    }
+    const image = await NgffImage.load(store, { signal });
     const arrays = await Promise.all(
       image.paths.map(
         (resolution) =>
@@ -126,21 +137,23 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
    * Equivalent to `new OMEZarrTileSource(config, loaded).whenReady()`, except
    * that loading the metadata can be aborted with `signal`.
    *
-   * @param config - URL or {@link OMEZarrTileSourceOptions}
+   * @param config - URL, `Blob` or {@link OMEZarrTileSourceOptions}
    * @param loaded - Previously loaded image of the same URL to reuse instead of
    *   loading it
    * @param options - `signal` aborts the load
    * @returns The ready tile source; rejects if loading or validation fails
    */
   static async open(
-    config: string | URL | OMEZarrTileSourceOptions,
+    config: string | URL | Blob | OMEZarrTileSourceOptions,
     loaded?: OMEZarr,
     options?: { signal?: AbortSignal },
   ): Promise<OMEZarrTileSource> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
     loaded ??=
-      typeof config === "string" || config instanceof URL
+      typeof config === "string" ||
+      config instanceof URL ||
+      config instanceof Blob
         ? await OMEZarrTileSource.loadOMEZarr(config, undefined, { signal })
         : await OMEZarrTileSource.loadOMEZarr(config.url, config.zip, {
             signal,
@@ -203,13 +216,13 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
    * `loaded` is given), raising `ready` or `open-failed` asynchronously.
    *
    * @param url - URL of the OME-Zarr image, as a string or a `URL`, resolved
-   *   against the document base URL; zipped files are detected by the `.ozx`
-   *   path suffix
+   *   against the document base URL (zipped files are detected by the `.ozx`
+   *   path suffix), or a `Blob` (e.g. a `File`) holding a zipped OME-Zarr file
    * @param loaded - Previously loaded image of the same URL to reuse instead of
    *   loading it
    * @throws If the URL cannot be resolved
    */
-  constructor(url: string | URL, loaded?: OMEZarr);
+  constructor(url: string | URL | Blob, loaded?: OMEZarr);
   /**
    * Creates a tile source and starts loading the OME-Zarr metadata (unless
    * `loaded` is given), raising `ready` or `open-failed` asynchronously.
@@ -217,18 +230,26 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
    * @param options - Tile source configuration
    * @param loaded - Previously loaded image of the same URL to reuse instead of
    *   loading it
-   * @throws If the configuration is invalid or the URL cannot be resolved */
+   * @throws If the configuration is invalid (e.g. `zip: false` with a `Blob`)
+   *   or the URL cannot be resolved */
   constructor(options: OMEZarrTileSourceOptions, loaded?: OMEZarr);
   constructor(
-    config: string | URL | OMEZarrTileSourceOptions,
+    config: string | URL | Blob | OMEZarrTileSourceOptions,
     loaded?: OMEZarr,
   ) {
     // validated before super(), which schedules getImageInfo (async)
     const options: OMEZarrTileSourceOptions =
-      typeof config === "string" || config instanceof URL
+      typeof config === "string" ||
+      config instanceof URL ||
+      config instanceof Blob
         ? { url: config }
         : config;
     const url = resolveUrl(options.url);
+    if (options.url instanceof Blob && options.zip === false) {
+      throw new Error(
+        "zip must not be false for a Blob (only zipped OME-Zarr files can be loaded from a Blob)",
+      );
+    }
     let c: number[] | undefined;
     if (options.c !== undefined) {
       if (Array.isArray(options.c)) {
@@ -281,7 +302,8 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
     );
     super(url.toString());
     this.url = url.toString();
-    this.zip = options.zip ?? isOZX(url);
+    this.blob = options.url instanceof Blob ? options.url : undefined;
+    this.zip = options.zip ?? (this.blob !== undefined || isOZX(url));
     this._t = options.t;
     this._z = options.z;
     this._c = c;
@@ -639,11 +661,12 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
    * Loads (or reuses) the OME-Zarr metadata, validates it against the
    * configuration and raises `ready`, or raises `open-failed` on error.
    *
-   * Called asynchronously by the OpenSeadragon `TileSource` constructor.
+   * Called asynchronously by the OpenSeadragon `TileSource` constructor. Loads
+   * from {@link blob} if configured, otherwise from the URL.
    */
   override getImageInfo(url: string): void {
     Promise.resolve(
-      this._loaded ?? OMEZarrTileSource.loadOMEZarr(url, this.zip),
+      this._loaded ?? OMEZarrTileSource.loadOMEZarr(this.blob ?? url, this.zip),
     )
       .then((loaded) => {
         const axisNames = loaded.image.getAxesNames();
@@ -769,7 +792,8 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
   }
 
   /**
-   * Cache key of a tile: the image URL plus the resolved data parameters
+   * Cache key of a tile: the image URL (the object URL of a configured
+   * {@link blob}) plus the resolved data parameters
    * (`zip`, {@link t}, {@link z}, {@link cs}) and tile coordinates, and an
    * FNV-1a hash of the rendering settings (the configured `ranges`, `colors`,
    * `lutsOrColorMaps` and `inverteds`, and `autoBoost`), so that tile sources

@@ -13,17 +13,21 @@ export interface OMEZarrTileSourceOptions {
 
   /**
    * URL of the OME-Zarr image (group) or of a zipped OME-Zarr file, as a
-   * string or a `URL`.
+   * string or a `URL`, or a `Blob` (e.g. a `File`) holding a zipped OME-Zarr
+   * file.
    *
-   * Relative URLs are resolved against the document base URL.
+   * Relative URLs are resolved against the document base URL. A `Blob` is read
+   * with `ZipFileStore.fromBlob` and must be zipped ({@link zip} must not be
+   * `false`).
    */
-  url: string | URL;
+  url: string | URL | Blob;
 
   /**
    * Whether the URL points to a zipped OME-Zarr file.
    *
    * Defaults to `true` for URLs whose path ends in `.ozx` (ignoring any query
-   * and fragment) and `false` otherwise.
+   * and fragment) and for `Blob`s, and `false` otherwise. Must not be `false`
+   * for a `Blob`.
    */
   zip?: boolean;
 
