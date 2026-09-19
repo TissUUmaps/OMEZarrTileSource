@@ -15,6 +15,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
+## [0.7.1] - 2026-09-19
+
+### Added
+
+### Changed
+
+### Fixed
+
+- `ranges` and `colors` getters no longer assume that omero channels have a `window` and a `color` (required by the `Channel` type, but missing in some OME-Zarr images); channels without them fall back to the data type range and to white, as for malformed values
+
+### Removed
+
 ## [0.7.0] - 2026-09-17
 
 ### Added
@@ -187,7 +199,8 @@ Complete package.json
 
 Initial release
 
-[unreleased]: https://github.com/TissUUmaps/OMEZarrTileSource/compare/v0.7.0...HEAD
+[unreleased]: https://github.com/TissUUmaps/OMEZarrTileSource/compare/v0.7.1...HEAD
+[0.7.1]: https://github.com/TissUUmaps/OMEZarrTileSource/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/TissUUmaps/OMEZarrTileSource/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/TissUUmaps/OMEZarrTileSource/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/TissUUmaps/OMEZarrTileSource/compare/v0.4.0...v0.5.0
