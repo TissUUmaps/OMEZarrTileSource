@@ -411,8 +411,8 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
       channel: Channel | undefined,
     ): [number, number] | undefined => {
       if (
-        channel?.window.start !== undefined &&
-        channel.window.end !== undefined
+        channel?.window?.start !== undefined &&
+        channel?.window?.end !== undefined
       ) {
         return [channel.window.start, channel.window.end];
       }
@@ -438,7 +438,7 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
   get colors(): (Color | undefined)[] | undefined {
     const channels = this.channels;
     const omeroColor = (channel: Channel | undefined): Color | undefined => {
-      if (channel === undefined) {
+      if (channel?.color === undefined) {
         return undefined;
       }
       const hex = /^#?([0-9A-Fa-f]{6})$/.exec(channel.color)?.[1];
