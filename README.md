@@ -207,7 +207,20 @@ const tileSource2 = new OMEZarrTileSource(
 
 `loadOMEZarr(url, zip?, { signal })` loads the metadata with ome-zarr.js and
 opens the arrays of all resolution levels; `url` may also be a `Blob` holding a
-zipped OME-Zarr file. An `OMEZarr` can also be assembled
+zipped OME-Zarr file, or a zarrita store (`Readable`, e.g. a custom
+`AsyncReadable`; `zip: true` is rejected, wrap zipped files in a `ZipFileStore`
+instead). Images loaded from a store can only be rendered by
+passing the `OMEZarr` to a tile source, with a `url` that identifies the store:
+
+```javascript
+const loaded = await OMEZarrTileSource.loadOMEZarr(myStore);
+const tileSource = await OMEZarrTileSource.open(
+  { url: "custom://my-image" },
+  loaded,
+);
+```
+
+An `OMEZarr` can also be assembled
 from an `NgffImage` loaded by the app, as long as `arrays` lists the
 opened arrays of `image.paths` in order. It is not checked against the URL of
 the tile source it is passed to.

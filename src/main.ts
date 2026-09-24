@@ -9,7 +9,7 @@ export {
   type LUTOrColorMap,
   fnv1a,
   getDataTypeRange,
-  isOZX,
+  isOZXUrl,
   resolveUrl,
 } from "./utils";
 

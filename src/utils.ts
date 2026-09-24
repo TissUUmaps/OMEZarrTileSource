@@ -46,7 +46,7 @@ export function resolveUrl(url: string | URL | Blob): URL {
  * @param url - URL to check, as a string or a `URL`
  * @returns Whether the URL path ends in `.ozx`
  */
-export function isOZX(url: string | URL): boolean {
+export function isOZXUrl(url: string | URL): boolean {
   try {
     return resolveUrl(url).pathname.endsWith(".ozx");
   } catch {
