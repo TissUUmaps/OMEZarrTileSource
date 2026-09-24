@@ -15,6 +15,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
+## [0.8.0] - 2026-09-24
+
+### Added
+
+- `OMEZarrTileSource.loadOMEZarr` accepts a zarrita store (`Readable`, e.g. a custom or authenticated `AsyncReadable`) in addition to a URL or a `Blob`; `zip: true` is rejected for stores (wrap zipped files in a `ZipFileStore` instead). The resulting `OMEZarr` is rendered by passing it to the constructor or to `OMEZarrTileSource.open` together with a `url` that identifies the store
+
+### Changed
+
+- **Breaking:** the `isOZX(url)` helper has been renamed to `isOZXUrl(url)`
+
+### Fixed
+
+### Removed
+
 ## [0.7.1] - 2026-09-19
 
 ### Added
@@ -199,7 +213,8 @@ Complete package.json
 
 Initial release
 
-[unreleased]: https://github.com/TissUUmaps/OMEZarrTileSource/compare/v0.7.1...HEAD
+[unreleased]: https://github.com/TissUUmaps/OMEZarrTileSource/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/TissUUmaps/OMEZarrTileSource/compare/v0.7.1...v0.8.0
 [0.7.1]: https://github.com/TissUUmaps/OMEZarrTileSource/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/TissUUmaps/OMEZarrTileSource/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/TissUUmaps/OMEZarrTileSource/compare/v0.5.0...v0.6.0
