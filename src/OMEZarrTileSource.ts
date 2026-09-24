@@ -11,7 +11,7 @@ import {
   type LUTOrColorMap,
   fnv1a,
   getDataTypeRange,
-  isOZX,
+  isOZXUrl,
   resolveUrl,
 } from "./utils";
 
@@ -87,37 +87,46 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
    * Loads the OME-Zarr metadata and opens the arrays of all resolution levels.
    *
    * The result can be passed to the constructor or to {@link open} to share one
-   * metadata load across several tile sources for the same URL.
+   * metadata load across several tile sources for the same URL. Images loaded
+   * from a zarrita store can only be rendered this way, with a `url` that
+   * identifies the store (e.g. `custom://my-image`).
    *
-   * @param url - URL of the OME-Zarr image or zipped OME-Zarr file, as a string
-   *   or a `URL` (relative URLs are resolved against the document base URL),
-   *   or a `Blob` (e.g. a `File`) holding a zipped OME-Zarr file
+   * @param store - URL of the OME-Zarr image or zipped OME-Zarr file, as a
+   *   string or a `URL` (relative URLs are resolved against the document base
+   *   URL), a `Blob` (e.g. a `File`) holding a zipped OME-Zarr file, or a
+   *   zarrita store (`Readable`, e.g. a custom `AsyncReadable`) holding the
+   *   OME-Zarr image
    * @param zip - Whether the URL points to a zipped OME-Zarr file; defaults to
-   *   `true` for URLs whose path ends in `.ozx` and for `Blob`s
+   *   `true` for URLs whose path ends in `.ozx` and for `Blob`s. Must not be
+   *   `false` for a `Blob`, and must not be `true` for a zarrita store (wrap
+   *   zipped files in a `ZipFileStore` instead)
    * @param options - `signal` aborts the load
    * @returns The loaded image and its arrays, highest resolution first
-   * @throws If the URL is relative and there is no document base URL, or if
-   *   `zip` is `false` for a `Blob`
+   * @throws If the URL is relative and there is no document base URL, if `zip`
+   *   is `false` for a `Blob`, or if `zip` is `true` for a zarrita store
    */
   static async loadOMEZarr(
-    url: string | URL | Blob,
+    store: string | URL | Blob | zarr.Readable,
     zip?: boolean,
     options?: { signal?: AbortSignal },
   ): Promise<OMEZarr> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
-    let store: ZipFileStore | string;
-    if (url instanceof Blob) {
+    if (typeof store === "string" || store instanceof URL) {
+      const resolvedUrl = resolveUrl(store);
+      store =
+        (zip ?? isOZXUrl(resolvedUrl))
+          ? ZipFileStore.fromUrl(resolvedUrl)
+          : store.toString();
+    } else if (store instanceof Blob) {
       if (zip === false) {
         throw new Error("only zipped OME-Zarr files can be loaded from a Blob");
       }
-      store = ZipFileStore.fromBlob(url);
-    } else {
-      const resolvedUrl = resolveUrl(url);
-      store =
-        (zip ?? isOZX(resolvedUrl))
-          ? ZipFileStore.fromUrl(resolvedUrl)
-          : url.toString();
+      store = ZipFileStore.fromBlob(store);
+    } else if (zip === true) {
+      throw new Error(
+        "zip must not be true for a zarrita store (wrap zipped OME-Zarr files in a ZipFileStore instead)",
+      );
     }
     const image = await NgffImage.load(store, { signal });
     const arrays = await Promise.all(
@@ -303,7 +312,7 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
     super(url.toString());
     this.url = url.toString();
     this.blob = options.url instanceof Blob ? options.url : undefined;
-    this.zip = options.zip ?? (this.blob !== undefined || isOZX(url));
+    this.zip = options.zip ?? (this.blob !== undefined || isOZXUrl(url));
     this._t = options.t;
     this._z = options.z;
     this._c = c;
@@ -608,7 +617,7 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
       return false;
     }
     if (typeof data === "string") {
-      return isOZX(data);
+      return isOZXUrl(data);
     }
     return "type" in data && data.type === "ome-zarr";
   }
