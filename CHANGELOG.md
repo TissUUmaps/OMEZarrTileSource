@@ -15,6 +15,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
+## [0.8.1] - 2026-09-26
+
+### Added
+
+### Changed
+
+- `@zarrita/storage` is a regular dependency instead of a peer dependency (it is only used internally)
+- The `ome-zarr.js` peer dependency range has been narrowed from `>=0.0.20 <0.1.0` to `^0.0.20` (i.e. exactly 0.0.20, as any 0.0.x release may be breaking)
+
+### Fixed
+
+### Removed
+
 ## [0.8.0] - 2026-09-24
 
 ### Added
@@ -213,7 +226,8 @@ Complete package.json
 
 Initial release
 
-[unreleased]: https://github.com/TissUUmaps/OMEZarrTileSource/compare/v0.8.0...HEAD
+[unreleased]: https://github.com/TissUUmaps/OMEZarrTileSource/compare/v0.8.1...HEAD
+[0.8.1]: https://github.com/TissUUmaps/OMEZarrTileSource/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/TissUUmaps/OMEZarrTileSource/compare/v0.7.1...v0.8.0
 [0.7.1]: https://github.com/TissUUmaps/OMEZarrTileSource/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/TissUUmaps/OMEZarrTileSource/compare/v0.6.0...v0.7.0

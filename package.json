@@ -1,6 +1,6 @@
 {
   "name": "omezarr-tilesource",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "description": "An OpenSeadragon tile source for the OME-Zarr bioimage file format",
   "homepage": "https://github.com/TissUUmaps/OMEZarrTileSource#readme",
   "bugs": "https://github.com/TissUUmaps/OMEZarrTileSource/issues",
@@ -35,10 +35,12 @@
     "build:lib": "tsc && vite build --mode library",
     "preview": "vite preview"
   },
+  "dependencies": {
+    "@zarrita/storage": "^0.2.0"
+  },
   "peerDependencies": {
-    "@zarrita/storage": "^0.2.0",
-    "ome-zarr.js": ">=0.0.20 <0.1.0",
-    "openseadragon": ">=6.0.0 <7.0.0",
+    "ome-zarr.js": "^0.0.20",
+    "openseadragon": "^6.0.0",
     "zarrita": "^0.7.5"
   },
   "devDependencies": {
@@ -46,13 +48,12 @@
     "@microsoft/api-extractor": "^7.58.7",
     "@trivago/prettier-plugin-sort-imports": "^6.0.2",
     "@vitest/coverage-v8": "^4.1.7",
-    "@zarrita/storage": "0.2.0",
     "eslint": "^10.4.0",
     "eslint-config-prettier": "^10.1.8",
     "husky": "^9.1.7",
     "lint-staged": "^17.0.5",
     "ome-zarr.js": "0.0.20",
-    "openseadragon": "^6.1.1",
+    "openseadragon": "^6.0.0",
     "prettier": "^3.8.3",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.59.4",

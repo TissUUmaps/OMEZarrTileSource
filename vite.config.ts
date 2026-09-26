@@ -5,8 +5,9 @@ import { nodePolyfills } from "vite-plugin-node-polyfills";
 export default defineConfig(({ mode }) => {
   if (mode === "library") {
     // ES module library build: runtime dependencies (zarrita, ome-zarr.js,
-    // @zarrita/storage) are left external so that the consuming app installs
-    // and shares a single copy of them (e.g. to pass NgffImage instances).
+    // openseadragon, @zarrita/storage) are left external so that the consuming
+    // app installs and shares a single copy of them (e.g. to pass NgffImage
+    // instances).
     return {
       build: {
         lib: {
@@ -16,7 +17,7 @@ export default defineConfig(({ mode }) => {
         },
         rolldownOptions: {
           external: [
-            "@zarrita/storage/zip",
+            /^@zarrita\/storage(\/|$)/,
             "ome-zarr.js",
             "openseadragon",
             "zarrita",
