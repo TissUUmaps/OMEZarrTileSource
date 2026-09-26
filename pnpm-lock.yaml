@@ -6,6 +6,10 @@ settings:
 
 importers:
   .:
+    dependencies:
+      "@zarrita/storage":
+        specifier: ^0.2.0
+        version: 0.2.0
     devDependencies:
       "@eslint/js":
         specifier: ^10.0.1
@@ -19,9 +23,6 @@ importers:
       "@vitest/coverage-v8":
         specifier: ^4.1.7
         version: 4.1.7(vitest@4.1.7)
-      "@zarrita/storage":
-        specifier: 0.2.0
-        version: 0.2.0
       eslint:
         specifier: ^10.4.0
         version: 10.4.0
@@ -38,7 +39,7 @@ importers:
         specifier: 0.0.20
         version: 0.0.20
       openseadragon:
-        specifier: ^6.1.1
+        specifier: ^6.0.0
         version: 6.1.1
       prettier:
         specifier: ^3.8.3
