@@ -41,9 +41,14 @@
         c = undefined;
       }
 
+      let range = searchParams.get("range") ?? undefined;
+      if (range !== undefined) {
+        range = range.split(",").map((n) => Number(n));
+      }
+
       new OpenSeadragon.Viewer({
         id: "viewer",
-        tileSources: { type: "ome-zarr", url, t, z, c },
+        tileSources: { type: "ome-zarr", url, t, z, c, range },
         prefixUrl: "https://openseadragon.github.io/openseadragon/images/",
         timeout: 60000, // increase timeout for large images,
         minZoomImageRatio: 0, // allow zooming out indefinitely
