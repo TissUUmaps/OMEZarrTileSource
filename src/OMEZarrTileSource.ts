@@ -793,6 +793,29 @@ export class OMEZarrTileSource extends OpenSeadragon.TileSource {
   }
 
   /**
+   * Tile (chunk) containing a point of a resolution level.
+   *
+   * The inherited implementation scales the point by the full-resolution size,
+   * whereas {@link getNumTiles} uses the size of the level itself. For levels
+   * whose size is rounded down, a point near the right or bottom edge would get
+   * an index past the last tile, so the index is clamped.
+   */
+  override getTileAtPoint(
+    level: number,
+    point: OpenSeadragon.Point,
+  ): OpenSeadragon.Tile {
+    // OpenSeadragon declares a Tile, but returns the tile index as a Point
+    const tile = super.getTileAtPoint(
+      level,
+      point,
+    ) as unknown as OpenSeadragon.Point;
+    const numTiles = this.getNumTiles(level);
+    tile.x = Math.min(tile.x, numTiles.x - 1);
+    tile.y = Math.min(tile.y, numTiles.y - 1);
+    return tile as unknown as OpenSeadragon.Tile;
+  }
+
+  /**
    * Encodes the tile coordinates as `level=…&x=…&y=…` for
    * {@link downloadTileStart}; no network URL is involved.
    */

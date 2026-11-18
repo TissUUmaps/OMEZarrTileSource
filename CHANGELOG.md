@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `getTileAtPoint` no longer returns a tile index past the last tile of a resolution level whose size is rounded down; OpenSeadragon wraps such an index, so rotated images showed a copy of their first tile row or column next to them when zoomed out
+
 ### Removed
 
 ## [0.8.1] - 2026-09-26
