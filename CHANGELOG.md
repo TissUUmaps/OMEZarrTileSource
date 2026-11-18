@@ -13,6 +13,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+### Removed
+
+## [0.8.2] - 2026-11-18
+
+### Added
+
+### Changed
+
+### Fixed
+
 - `getTileAtPoint` no longer returns a tile index past the last tile of a resolution level whose size is rounded down; OpenSeadragon wraps such an index, so rotated images showed a copy of their first tile row or column next to them when zoomed out
 
 ### Removed
@@ -228,7 +238,8 @@ Complete package.json
 
 Initial release
 
-[unreleased]: https://github.com/TissUUmaps/OMEZarrTileSource/compare/v0.8.1...HEAD
+[unreleased]: https://github.com/TissUUmaps/OMEZarrTileSource/compare/v0.8.2...HEAD
+[0.8.2]: https://github.com/TissUUmaps/OMEZarrTileSource/compare/v0.8.1...v0.8.2
 [0.8.1]: https://github.com/TissUUmaps/OMEZarrTileSource/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/TissUUmaps/OMEZarrTileSource/compare/v0.7.1...v0.8.0
 [0.7.1]: https://github.com/TissUUmaps/OMEZarrTileSource/compare/v0.7.0...v0.7.1
